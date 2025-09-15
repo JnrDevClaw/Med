@@ -1,17 +1,29 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { authStore } from '$stores/auth';
+	import { authStore } from '../stores/auth';
 	import Icon from '$lib/Icon.svelte';
+	import { onDestroy } from 'svelte';
 
-	interface Props {
-		open: boolean;
-		onClose: () => void;
-	}
+	export let open: boolean = false;
+	export let onClose: () => void = () => {};
 
-	let { open, onClose }: Props = $props();
+	// subscribe to authStore to get user
+	let user: any = null;
+	const unsubscribeAuth = authStore.subscribe(state => {
+		user = state?.user || null;
+	});
 
-	let user = $authStore.user;
+	// subscribe to page store to get current path
+	let currentPath = '';
+	const unsubscribePage = page.subscribe(p => {
+		currentPath = p.url.pathname;
+	});
+
+	onDestroy(() => {
+		unsubscribeAuth();
+		unsubscribePage();
+	});
 
 	const patientNavItems = [
 		{ href: '/dashboard', icon: 'home', label: 'Dashboard' },
@@ -32,7 +44,9 @@
 		{ href: '/schedule', icon: 'clock', label: 'Schedule' }
 	];
 
-	$: navItems = user?.role === 'doctor' ? doctorNavItems : patientNavItems;
+	function navItems() {
+		return user?.role === 'doctor' ? doctorNavItems : patientNavItems;
+	}
 
 	function navigateTo(href: string) {
 		goto(href);
@@ -40,8 +54,7 @@
 	}
 
 	function isActive(href: string): boolean {
-		return $page.url.pathname === href || 
-			   ($page.url.pathname.startsWith(href) && href !== '/dashboard');
+		return currentPath === href || (currentPath.startsWith(href) && href !== '/dashboard');
 	}
 </script>
 

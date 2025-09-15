@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import type { AuthState, User } from '$types';
-import { api } from '$utils/api';
+import { api } from '../utils/api';
 import { browser } from '$app/environment';
 
 const initialState: AuthState = {

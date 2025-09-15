@@ -1,15 +1,22 @@
 <script lang="ts">
 	import { icons } from './icons.ts';
-	
-	interface Props {
+	import { onMount } from 'svelte';
+
+	export interface Props {
 		name: keyof typeof icons;
 		class?: string;
 		size?: number;
 	}
-	
-	let { name, class: className = '', size = 24 }: Props = $props();
-	
-	$: iconPath = icons[name] || '';
+
+	export let name: keyof typeof icons;
+	export let className: string = '';
+	export let size: number = 24;
+
+	// compute icon path without using legacy `$:` reactive rune
+	let iconPath = '';
+	onMount(() => {
+		iconPath = icons[name] || '';
+	});
 </script>
 
 <svg

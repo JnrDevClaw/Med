@@ -1,119 +1,431 @@
-const { Type } = require('@sinclair/typebox');
-
-module.exports = async function (fastify, opts) {
+const authRoutes = async (fastify, opts) => {
+  
+  // Generate authentication challenge
   fastify.get('/challenge', {
     schema: {
       tags: ['auth'],
       description: 'Generate authentication challenge for DID',
       response: {
-        200: Type.Object({ challenge: Type.String(), expires: Type.String() }),
+        200: {
+          type: 'object',
+          properties: {
+            challenge: { type: 'string' },
+            expires: { type: 'string' }
+          }
+        }
       },
     },
   }, async (request, reply) => {
-    const challenge = fastify.jwt.sign({ type: 'auth_challenge', timestamp: Date.now() }, { expiresIn: '5m' });
-    return { challenge, expires: new Date(Date.now() + 5 * 60 * 1000).toISOString() };
+    const challenge = fastify.jwt.sign(
+      { type: 'auth_challenge', timestamp: Date.now() },
+      { expiresIn: '5m' }
+    );
+    
+    return {
+      challenge,
+      expires: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    };
   });
 
+  // User signup
   fastify.post('/signup', {
     schema: {
       tags: ['auth'],
       description: 'Register new user with DID',
-      body: Type.Object({ did: Type.String(), profile: Type.Object({ name: Type.String(), role: Type.Union([Type.Literal('patient'), Type.Literal('doctor')]), email: Type.Optional(Type.String({ format: 'email' })) }) }),
+      body: {
+        type: 'object',
+        required: ['did', 'profile'],
+        properties: {
+          did: { type: 'string' },
+          profile: {
+            type: 'object',
+            required: ['name', 'role'],
+            properties: {
+              name: { type: 'string' },
+              role: { type: 'string', enum: ['patient', 'doctor'] },
+              email: { type: 'string', format: 'email' }
+            }
+          }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                did: { type: 'string' },
+                profile: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    role: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' }
+          }
+        }
+      },
     },
   }, async (request, reply) => {
     const { did, profile } = request.body;
+
     try {
-      const existingUser = await fastify.db('users').where('did', did).first();
-      if (existingUser) return reply.code(400).send({ error: 'USER_EXISTS', message: 'User with this DID already exists' });
+      // Check if user already exists
+      const existingUser = await fastify.db('users')
+        .where('did', did)
+        .first();
 
-      const [newUser] = await fastify.db('users').insert({ did, name: profile.name, role: profile.role, email: profile.email || null, verified: false, created_at: new Date(), updated_at: new Date() }).returning(['id', 'did', 'name', 'role']);
+      if (existingUser) {
+        return reply.code(400).send({
+          error: 'USER_EXISTS',
+          message: 'User with this DID already exists',
+        });
+      }
 
+      // Create user in database
+      const [newUser] = await fastify.db('users')
+        .insert({
+          did,
+          name: profile.name,
+          role: profile.role,
+          email: profile.email || null,
+          verified: false,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returning(['id', 'did', 'name', 'role']);
+
+      // Store profile on Ceramic (IDX)
       try {
-        await fastify.db('ceramic_profiles').insert({ user_id: newUser.id, did, profile_stream_id: null, created_at: new Date() });
+        // This would integrate with Ceramic to store the profile
+        // For now, we'll store a reference
+        await fastify.db('ceramic_profiles')
+          .insert({
+            user_id: newUser.id,
+            did,
+            profile_stream_id: null, // Would be set after Ceramic integration
+            created_at: new Date(),
+          });
       } catch (ceramicError) {
         fastify.log.warn('Failed to store profile on Ceramic:', ceramicError);
       }
 
-      reply.code(201).send({ success: true, message: 'User registered successfully', user: { id: newUser.id, did: newUser.did, profile: { name: newUser.name, role: newUser.role } } });
+      reply.code(201).send({
+        success: true,
+        message: 'User registered successfully',
+        user: {
+          id: newUser.id,
+          did: newUser.did,
+          profile: {
+            name: newUser.name,
+            role: newUser.role,
+          },
+        },
+      });
+
     } catch (error) {
       fastify.log.error('Signup error:', error);
-      return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Failed to register user' });
+      return reply.code(500).send({
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to register user',
+      });
     }
   });
 
+  // User login
   fastify.post('/login', {
     schema: {
       tags: ['auth'],
       description: 'Authenticate user with DID signature',
-      body: Type.Object({ did: Type.String(), signature: Type.String(), challenge: Type.String() }),
+      body: {
+        type: 'object',
+        required: ['did', 'signature', 'challenge'],
+        properties: {
+          did: { type: 'string' },
+          signature: { type: 'string' },
+          challenge: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                did: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string' },
+                verified: { type: 'boolean' }
+              }
+            }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' }
+          }
+        }
+      },
     },
   }, async (request, reply) => {
     const { did, signature, challenge } = request.body;
+
     try {
-      try { fastify.jwt.verify(challenge); } catch (error) { return reply.code(401).send({ error: 'INVALID_CHALLENGE', message: 'Invalid or expired challenge' }); }
+      // Verify challenge
+      try {
+        fastify.jwt.verify(challenge);
+      } catch (error) {
+        return reply.code(401).send({
+          error: 'INVALID_CHALLENGE',
+          message: 'Invalid or expired challenge',
+        });
+      }
 
-      const user = await fastify.db('users').where('did', did).first();
-      if (!user) return reply.code(401).send({ error: 'USER_NOT_FOUND', message: 'User not found' });
+      // Find user
+      const user = await fastify.db('users')
+        .where('did', did)
+        .first();
 
-      const accessToken = fastify.jwt.sign({ userId: user.id, did: user.did, role: user.role }, { expiresIn: '1h' });
-      const refreshToken = fastify.jwt.sign({ userId: user.id, type: 'refresh' }, { expiresIn: '7d' });
+      if (!user) {
+        return reply.code(401).send({
+          error: 'USER_NOT_FOUND',
+          message: 'User not found',
+        });
+      }
 
-      await fastify.db('refresh_tokens').insert({ user_id: user.id, token: refreshToken, expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), created_at: new Date() });
+      // TODO: Verify DID signature
+      // This would involve verifying the signature against the DID document
+      // For now, we'll assume the signature is valid
 
-      return { success: true, accessToken, refreshToken, user: { id: user.id, did: user.did, name: user.name, role: user.role, verified: user.verified } };
+      // Generate tokens
+      const accessToken = fastify.jwt.sign(
+        { 
+          userId: user.id,
+          did: user.did,
+          role: user.role,
+        },
+        { expiresIn: '1h' }
+      );
+
+      const refreshToken = fastify.jwt.sign(
+        { 
+          userId: user.id,
+          type: 'refresh',
+        },
+        { expiresIn: '7d' }
+      );
+
+      // Store refresh token
+      await fastify.db('refresh_tokens')
+        .insert({
+          user_id: user.id,
+          token: refreshToken,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          created_at: new Date(),
+        });
+
+      return {
+        success: true,
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          did: user.did,
+          name: user.name,
+          role: user.role,
+          verified: user.verified,
+        },
+      };
+
     } catch (error) {
       fastify.log.error('Login error:', error);
-      return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Login failed' });
+      return reply.code(500).send({
+        error: 'INTERNAL_ERROR',
+        message: 'Login failed',
+      });
     }
   });
 
+  // Refresh token
   fastify.post('/refresh', {
     schema: {
       tags: ['auth'],
       description: 'Refresh access token',
-      body: Type.Object({ refreshToken: Type.String() }),
+      body: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' }
+          }
+        }
+      },
     },
   }, async (request, reply) => {
     const { refreshToken } = request.body;
+
     try {
+      // Verify refresh token
       const payload = fastify.jwt.verify(refreshToken);
-      if (typeof payload === 'string' || payload.type !== 'refresh') throw new Error('Invalid token type');
+      
+      if (typeof payload === 'string' || payload.type !== 'refresh') {
+        throw new Error('Invalid token type');
+      }
 
-      const tokenRecord = await fastify.db('refresh_tokens').where('token', refreshToken).where('user_id', payload.userId).where('expires_at', '>', new Date()).first();
-      if (!tokenRecord) return reply.code(401).send({ error: 'INVALID_TOKEN', message: 'Invalid or expired refresh token' });
+      // Check if token exists and is valid
+      const tokenRecord = await fastify.db('refresh_tokens')
+        .where('token', refreshToken)
+        .where('user_id', payload.userId)
+        .where('expires_at', '>', new Date())
+        .first();
 
-      const user = await fastify.db('users').where('id', payload.userId).first();
-      if (!user) return reply.code(401).send({ error: 'USER_NOT_FOUND', message: 'User not found' });
+      if (!tokenRecord) {
+        return reply.code(401).send({
+          error: 'INVALID_TOKEN',
+          message: 'Invalid or expired refresh token',
+        });
+      }
 
-      const newAccessToken = fastify.jwt.sign({ userId: user.id, did: user.did, role: user.role }, { expiresIn: '1h' });
-      const newRefreshToken = fastify.jwt.sign({ userId: user.id, type: 'refresh' }, { expiresIn: '7d' });
+      // Get user
+      const user = await fastify.db('users')
+        .where('id', payload.userId)
+        .first();
 
-      await fastify.db('refresh_tokens').where('id', tokenRecord.id).update({ token: newRefreshToken, expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), updated_at: new Date() });
+      if (!user) {
+        return reply.code(401).send({
+          error: 'USER_NOT_FOUND',
+          message: 'User not found',
+        });
+      }
 
-      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+      // Generate new tokens
+      const newAccessToken = fastify.jwt.sign(
+        { 
+          userId: user.id,
+          did: user.did,
+          role: user.role,
+        },
+        { expiresIn: '1h' }
+      );
+
+      const newRefreshToken = fastify.jwt.sign(
+        { 
+          userId: user.id,
+          type: 'refresh',
+        },
+        { expiresIn: '7d' }
+      );
+
+      // Update refresh token
+      await fastify.db('refresh_tokens')
+        .where('id', tokenRecord.id)
+        .update({
+          token: newRefreshToken,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          updated_at: new Date(),
+        });
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+
     } catch (error) {
       fastify.log.error('Token refresh error:', error);
-      return reply.code(401).send({ error: 'INVALID_TOKEN', message: 'Invalid refresh token' });
+      return reply.code(401).send({
+        error: 'INVALID_TOKEN',
+        message: 'Invalid refresh token',
+      });
     }
   });
 
+  // Logout
   fastify.post('/logout', {
     schema: {
       tags: ['auth'],
       description: 'Logout user and invalidate refresh token',
-      headers: Type.Object({ authorization: Type.String() }),
-      body: Type.Object({ refreshToken: Type.String() }),
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: { type: 'string' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        }
+      },
     },
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const { refreshToken } = request.body;
     const user = request.user;
+
     try {
-      await fastify.db('refresh_tokens').where('token', refreshToken).where('user_id', user.userId).delete();
-      return { success: true, message: 'Logged out successfully' };
+      // Invalidate refresh token
+      await fastify.db('refresh_tokens')
+        .where('token', refreshToken)
+        .where('user_id', user.userId)
+        .delete();
+
+      return {
+        success: true,
+        message: 'Logged out successfully',
+      };
+
     } catch (error) {
       fastify.log.error('Logout error:', error);
-      return { success: true, message: 'Logged out successfully' };
+      return {
+        success: true,
+        message: 'Logged out successfully',
+      };
     }
   });
 };
+
+export default authRoutes;

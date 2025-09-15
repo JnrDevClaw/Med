@@ -61,7 +61,8 @@
 		return Object.keys(errors).length === 0;
 	}
 
-	async function handleSignup() {
+	async function handleSignup(event?: Event) {
+		event?.preventDefault?.();
 		if (!selectedRole || !validateProfile()) {
 			return;
 		}
@@ -128,22 +129,22 @@
 	<meta name="description" content="Create your secure MedPlatform account with decentralized identity" />
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex flex-col justify-center px-6 py-12">
-	<div class="sm:mx-auto sm:w-full sm:max-w-md">
+<div class="min-h-screen bg-gradient-to-br from-primary-800 via-primary-700 to-secondary-900 flex flex-col justify-center px-6 py-12 text-white">
+	<div class="sm:mx-auto sm:w-full sm:max-w-2xl">
 		<!-- Header -->
-		<div class="text-center mb-8">
-			<div class="mx-auto w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center mb-4">
-				<span class="text-white font-bold text-lg">MP</span>
+		<div class="text-center mb-10">
+			<div class="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400 to-pink-500 rounded-2xl flex items-center justify-center mb-4 shadow-xl">
+				<span class="text-white font-extrabold text-xl">MP</span>
 			</div>
-			<h2 class="text-3xl font-bold text-gray-900">
-				Create your account
+			<h2 class="text-4xl font-extrabold tracking-tight">
+				Create your MedPlatform account
 			</h2>
-			<p class="mt-2 text-gray-600">
-				Join the decentralized healthcare revolution
+			<p class="mt-2 text-primary-200 max-w-xl mx-auto">
+				Join the decentralized healthcare platform with enterprise-grade privacy and AI assistance.
 			</p>
 		</div>
 
-		<div class="card">
+	<div class="card glass p-8 shadow-2xl border border-white/10 bg-white/5">
 			<!-- Progress indicator -->
 			<div class="mb-6">
 				<div class="flex items-center justify-between text-sm">
@@ -174,7 +175,7 @@
 					
 					<button
 						type="button"
-						class="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-left"
+						class="w-full p-6 rounded-lg bg-white/5 hover:bg-white/10 transition-shadow border border-white/10 shadow-sm text-left"
 						onclick={() => selectRole('patient')}
 					>
 						<div class="flex items-start space-x-4">
@@ -192,7 +193,7 @@
 					
 					<button
 						type="button"
-						class="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-left"
+						class="w-full p-6 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-colors text-left text-white shadow-lg"
 						onclick={() => selectRole('doctor')}
 					>
 						<div class="flex items-start space-x-4">
@@ -221,29 +222,29 @@
 						</p>
 					</div>
 					
-					<div class="bg-gray-50 p-4 rounded-lg">
-						<label class="label">Your DID</label>
+					<div class="bg-white/5 p-4 rounded-lg border border-white/6">
+						<label class="label text-primary-100">Your DID</label>
 						<div class="flex items-center space-x-2">
 							<input
 								type="text"
 								value={generatedDID}
 								readonly
-								class="input bg-white"
+								class="input bg-transparent text-white border-white/10"
 							/>
 							<button
 								type="button"
-								class="btn-outline px-3 py-2 text-sm"
+								class="btn-primary-outline px-3 py-2 text-sm text-white/90 border-white/10"
 								onclick={() => navigator.clipboard.writeText(generatedDID)}
 							>
 								Copy
 							</button>
 						</div>
-						<p class="text-xs text-gray-500 mt-2">
+						<p class="text-xs text-primary-200 mt-2">
 							💡 Save this DID safely. You'll need it to sign in to your account.
 						</p>
 					</div>
 					
-					<div class="bg-warning-50 border border-warning-200 rounded-lg p-4">
+					<div class="bg-warning-900/20 border border-warning-800 rounded-lg p-4">
 						<div class="flex items-start">
 							<div class="flex-shrink-0">
 								<span class="text-warning-600">⚠️</span>
@@ -269,7 +270,7 @@
 
 			{:else if step === 3}
 				<!-- Step 3: Profile Setup -->
-				<form onsubmit|preventDefault={handleSignup} class="space-y-6">
+				<form onsubmit={handleSignup} class="space-y-6">
 					<div class="text-center mb-4">
 						<h3 class="text-lg font-medium text-gray-900">
 							Complete your profile

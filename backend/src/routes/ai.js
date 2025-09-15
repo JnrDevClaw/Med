@@ -1,40 +1,275 @@
-const { Type } = require('@sinclair/typebox');
-
-module.exports = async function (fastify, opts) {
-  fastify.get('/models', {
-    schema: { tags: ['ai'], description: 'Get available AI medical models' },
-  }, async (request, reply) => {
-    return { models: [ { id: 'biogpt', name: 'BioGPT', description: 'Large language model trained on biomedical literature', capabilities: ['symptom analysis'], accuracy: 0.87, responseTime: '2-5 seconds' }, { id: 'mistral-med', name: 'Mistral Medical', description: 'Specialized model for medical consultations', capabilities: ['diagnosis assistance'], accuracy: 0.91, responseTime: '3-7 seconds' }, { id: 'clinical-bert', name: 'Clinical BERT', description: 'BERT model fine-tuned on clinical notes', capabilities: ['symptom extraction'], accuracy: 0.84, responseTime: '1-3 seconds' } ] };
-  });
-
-  fastify.post('/chat', {
-    schema: { tags: ['ai'], description: 'Send message to AI medical assistant', headers: Type.Object({ authorization: Type.String() }), body: Type.Intersect([Type.Object({ message: Type.String() }), Type.Object({ model: Type.String() })]) },
+const aiRoutes = async (fastify, opts) => {
+  
+  // Start AI consultation
+  fastify.post('/consultation', {
+    schema: {
+      tags: ['ai'],
+      description: 'Start AI consultation session',
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: { type: 'string' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['symptoms'],
+        properties: {
+          symptoms: { type: 'array', items: { type: 'string' } },
+          description: { type: 'string' },
+          urgency: { type: 'string', enum: ['low', 'medium', 'high', 'emergency'] }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            sessionId: { type: 'string' },
+            initialResponse: { type: 'string' }
+          }
+        }
+      },
+    },
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const { message, symptoms, previousMessages, model } = request.body;
     const user = request.user;
+    const { symptoms, description, urgency = 'low' } = request.body;
+
     try {
-      const [consultation] = await fastify.db('consultations').insert({ patient_id: user.userId, doctor_id: null, type: 'ai', status: 'active', started_at: new Date(), metadata: { model, symptoms: symptoms || [] } }).returning('*');
-      const aiResponse = await simulateAIResponse(model, message, symptoms);
-      await fastify.db('ai_consultations').insert({ consultation_id: consultation.id, patient_id: user.userId, patient_message: message, ai_response: aiResponse.response, model_used: model, confidence_score: aiResponse.confidence, escalated: aiResponse.escalationRecommended, model_metadata: { tokens_used: aiResponse.tokensUsed, processing_time: aiResponse.processingTime } });
-      await fastify.db('consultations').where('id', consultation.id).update({ status: 'completed', ended_at: new Date(), duration_minutes: Math.round((Date.now() - new Date(consultation.started_at).getTime()) / 60000) });
-      return { response: aiResponse.response, consultationId: consultation.id, model, confidence: aiResponse.confidence, disclaimer: getModelDisclaimer(model), followUpQuestions: aiResponse.followUpQuestions, escalationRecommended: aiResponse.escalationRecommended };
+      // Create AI consultation session
+      const [session] = await fastify.db('ai_consultations')
+        .insert({
+          patient_id: user.userId,
+          symptoms: JSON.stringify(symptoms),
+          description,
+          urgency,
+          status: 'active',
+          created_at: new Date(),
+        })
+        .returning('*');
+
+      // Generate initial AI response
+      const prompt = `Patient presents with symptoms: ${symptoms.join(', ')}. Description: ${description || 'None provided'}. Urgency: ${urgency}. Provide initial medical guidance.`;
+      
+      let initialResponse = 'I understand you\'re experiencing these symptoms. Let me help you with some initial guidance.';
+      
+      // Try to get AI response (fallback if AI service unavailable)
+      try {
+        // This would integrate with your AI service
+        // const aiResponse = await fastify.ai.generateResponse(prompt);
+        // initialResponse = aiResponse;
+      } catch (aiError) {
+        fastify.log.warn('AI service unavailable, using fallback response');
+      }
+
+      return reply.code(201).send({
+        success: true,
+        sessionId: session.id,
+        initialResponse,
+      });
+
     } catch (error) {
-      fastify.log.error('AI consultation error:', error);
-      return reply.code(500).send({ error: 'AI_ERROR', message: 'Failed to process AI consultation' });
+      fastify.log.error('AI consultation creation error:', error);
+      return reply.code(500).send({
+        error: 'CREATION_ERROR',
+        message: 'Failed to start AI consultation',
+      });
+    }
+  });
+
+  // Send message to AI
+  fastify.post('/consultation/:sessionId/message', {
+    schema: {
+      tags: ['ai'],
+      description: 'Send message to AI consultation',
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: { type: 'string' }
+        }
+      },
+      params: {
+        type: 'object',
+        properties: {
+          sessionId: { type: 'string' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['message'],
+        properties: {
+          message: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            response: { type: 'string' }
+          }
+        }
+      },
+    },
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const user = request.user;
+    const { sessionId } = request.params;
+    const { message } = request.body;
+
+    try {
+      // Verify session belongs to user
+      const session = await fastify.db('ai_consultations')
+        .where('id', sessionId)
+        .where('patient_id', user.userId)
+        .first();
+
+      if (!session) {
+        return reply.code(404).send({
+          error: 'SESSION_NOT_FOUND',
+          message: 'AI consultation session not found',
+        });
+      }
+
+      // Store user message
+      await fastify.db('ai_messages')
+        .insert({
+          session_id: sessionId,
+          sender: 'user',
+          message,
+          created_at: new Date(),
+        });
+
+      // Generate AI response
+      let aiResponse = 'Thank you for the additional information. How else can I help you?';
+      
+      try {
+        // This would integrate with your AI service
+        // const response = await fastify.ai.generateResponse(message, session);
+        // aiResponse = response;
+      } catch (aiError) {
+        fastify.log.warn('AI service unavailable, using fallback response');
+      }
+
+      // Store AI response
+      await fastify.db('ai_messages')
+        .insert({
+          session_id: sessionId,
+          sender: 'ai',
+          message: aiResponse,
+          created_at: new Date(),
+        });
+
+      return {
+        success: true,
+        response: aiResponse,
+      };
+
+    } catch (error) {
+      fastify.log.error('AI message error:', error);
+      return reply.code(500).send({
+        error: 'MESSAGE_ERROR',
+        message: 'Failed to process AI message',
+      });
+    }
+  });
+
+  // Get AI consultation history
+  fastify.get('/consultation/:sessionId', {
+    schema: {
+      tags: ['ai'],
+      description: 'Get AI consultation history',
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: { type: 'string' }
+        }
+      },
+      params: {
+        type: 'object',
+        properties: {
+          sessionId: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            session: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                symptoms: { type: 'array', items: { type: 'string' } },
+                description: { type: 'string' },
+                urgency: { type: 'string' },
+                status: { type: 'string' },
+                createdAt: { type: 'string' }
+              }
+            },
+            messages: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  sender: { type: 'string' },
+                  message: { type: 'string' },
+                  timestamp: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
+      },
+    },
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const user = request.user;
+    const { sessionId } = request.params;
+
+    try {
+      // Get session
+      const session = await fastify.db('ai_consultations')
+        .where('id', sessionId)
+        .where('patient_id', user.userId)
+        .first();
+
+      if (!session) {
+        return reply.code(404).send({
+          error: 'SESSION_NOT_FOUND',
+          message: 'AI consultation session not found',
+        });
+      }
+
+      // Get messages
+      const messages = await fastify.db('ai_messages')
+        .where('session_id', sessionId)
+        .orderBy('created_at', 'asc');
+
+      return {
+        session: {
+          id: session.id,
+          symptoms: JSON.parse(session.symptoms),
+          description: session.description,
+          urgency: session.urgency,
+          status: session.status,
+          createdAt: session.created_at,
+        },
+        messages: messages.map(m => ({
+          sender: m.sender,
+          message: m.message,
+          timestamp: m.created_at,
+        })),
+      };
+
+    } catch (error) {
+      fastify.log.error('AI consultation retrieval error:', error);
+      return reply.code(500).send({
+        error: 'RETRIEVAL_ERROR',
+        message: 'Failed to retrieve AI consultation',
+      });
     }
   });
 };
 
-async function simulateAIResponse(model, message, symptoms) {
-  const startTime = Date.now();
-  const responses = {
-    biogpt: { response: `Simulated response: ${message}`, confidence: 0.82, followUpQuestions: [], escalationRecommended: false },
-    'mistral-med': { response: `Simulated response: ${message}`, confidence: 0.89, followUpQuestions: [], escalationRecommended: false },
-    'clinical-bert': { response: `Simulated response: ${message}`, confidence: 0.76, followUpQuestions: [], escalationRecommended: false },
-  };
-  const out = responses[model] || responses['biogpt'];
-  return { ...out, tokensUsed: Math.floor(Math.random() * 200) + 50, processingTime: Date.now() - startTime };
-}
-
-function getModelDisclaimer(model) { return `⚠️ IMPORTANT MEDICAL DISCLAIMER: This AI assistant (${model}) is for informational purposes only.`; }
+export default aiRoutes;

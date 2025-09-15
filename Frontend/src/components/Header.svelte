@@ -1,18 +1,20 @@
 <script lang="ts">
 	import { Icon } from '$lib/icons';
-	import { authStore } from '$stores/auth';
+	import { authStore } from '../stores/auth';
 	import { goto } from '$app/navigation';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
 
-	interface Props {
-		onMenuClick: () => void;
-	}
-
-	let { onMenuClick }: Props = $props();
+	export let onMenuClick: () => void = () => {};
 
 	const dispatch = createEventDispatcher();
-	let showUserMenu = $state(false);
-	let user = $authStore.user;
+	let showUserMenu = false;
+
+	let user: any = null;
+	const unsubscribe = authStore.subscribe(state => {
+		user = state?.user || null;
+	});
+
+	onDestroy(() => unsubscribe());
 
 	function toggleUserMenu() {
 		showUserMenu = !showUserMenu;

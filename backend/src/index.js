@@ -1,29 +1,38 @@
-const fastify = require('fastify');
-// Type provider removed to avoid a TypeScript-only dependency
-const cors = require('@fastify/cors');
-const helmet = require('@fastify/helmet');
-const rateLimit = require('@fastify/rate-limit');
-const multipart = require('@fastify/multipart');
-const staticFiles = require('@fastify/static');
-const swagger = require('@fastify/swagger');
-const swaggerUi = require('@fastify/swagger-ui');
-const jwt = require('@fastify/jwt');
-const dotenv = require('dotenv');
-const path = require('path');
+import fastify from 'fastify';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
+import multipart from '@fastify/multipart';
+import staticFiles from '@fastify/static';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
+import jwt from '@fastify/jwt';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const consultationRoutes = require('./routes/consultations');
-const videoRoutes = require('./routes/video');
-const credentialRoutes = require('./routes/credentials');
-const aiRoutes = require('./routes/ai');
+// Import routes
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import consultationRoutes from './routes/consultations.js';
+import videoRoutes from './routes/video.js';
+import credentialRoutes from './routes/credentials.js';
+import aiRoutes from './routes/ai.js';
 
-const dbPlugin = require('./plugins/database');
-const ceramicPlugin = require('./plugins/ceramic');
-const ipfsPlugin = require('./plugins/ipfs');
+// Import plugins
+import dbPlugin from './plugins/database.js';
+import ceramicPlugin from './plugins/ceramic.js';
+import ipfsPlugin from './plugins/ipfs.js';
 
-const { authMiddleware } = require('./middleware/auth');
+// Import middleware
+import { authMiddleware } from './middleware/auth.js';
 
+// ES6 module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
 dotenv.config();
 
 const server = fastify({
@@ -34,13 +43,21 @@ const server = fastify({
 
 const start = async () => {
   try {
+    // Ensure uploads directory exists
+    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+      console.log(`📁 Created uploads directory: ${uploadDir}`);
+    }
+
+    // Register plugins
     await server.register(helmet, {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          imgSrc: ["'self'", "data:", "https:"],
         },
       },
     });
@@ -57,7 +74,7 @@ const start = async () => {
 
     await server.register(multipart, {
       limits: {
-        fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'),
+        fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'), // 10MB
       },
     });
 
@@ -70,6 +87,7 @@ const start = async () => {
       secret: process.env.JWT_SECRET || 'your-secret-key',
     });
 
+    // Swagger documentation
     await server.register(swagger, {
       swagger: {
         info: {
@@ -100,12 +118,16 @@ const start = async () => {
       },
     });
 
+    // Register custom plugins
     await server.register(dbPlugin);
+    server.log.info(`Database driver mode: ${process.env.DB_CLIENT || 'pg'}`);
     await server.register(ceramicPlugin);
     await server.register(ipfsPlugin);
 
+    // Register auth middleware
     await server.register(authMiddleware);
 
+    // Register routes
     await server.register(authRoutes, { prefix: '/api/auth' });
     await server.register(userRoutes, { prefix: '/api/users' });
     await server.register(consultationRoutes, { prefix: '/api/consultations' });
@@ -113,25 +135,31 @@ const start = async () => {
     await server.register(credentialRoutes, { prefix: '/api/credentials' });
     await server.register(aiRoutes, { prefix: '/api/ai' });
 
-    server.get('/health', async (request, reply) => ({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: '1.0.0',
-    }));
+    // Health check endpoint
+    server.get('/health', async (request, reply) => {
+      return { 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: '1.0.0'
+      };
+    });
 
+    // Start server
     const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || '0.0.0.0';
 
     await server.listen({ port, host });
     console.log(`🚀 Server running at http://${host}:${port}`);
     console.log(`📚 API Documentation available at http://${host}:${port}/docs`);
+    
   } catch (err) {
     server.log.error(err);
     process.exit(1);
   }
 };
 
+// Handle graceful shutdown
 const gracefulShutdown = async () => {
   try {
     console.log('Received shutdown signal, shutting down gracefully...');

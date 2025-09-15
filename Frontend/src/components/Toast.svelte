@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
-	import { toastStore } from '$stores/toast';
+	import { toastStore } from '../stores/toast';
 	import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-svelte';
 
 	let toast = $toastStore;

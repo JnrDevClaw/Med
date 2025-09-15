@@ -37,8 +37,8 @@
 	let chatMessages = $state<ChatMessage[]>([]);
 	let chatInput = $state('');
 	let showChat = $state(false);
-	let localVideoRef: HTMLVideoElement;
-	let remoteVideoRef: HTMLVideoElement;
+	let localVideoRef;
+	let remoteVideoRef;
 	let localStream: MediaStream | null = null;
 	let callTimer: number;
 	let roomId = $state('');
@@ -455,7 +455,9 @@
 						autoplay
 						playsInline
 						class="w-full h-full object-cover bg-gray-800"
-					></video>
+					>
+						<track kind="captions" srclang="en" label="English captions" />
+					</video>
 					
 					<!-- Local Video (Picture-in-Picture) -->
 					<div class="absolute top-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-white/20">
@@ -465,7 +467,9 @@
 							muted
 							playsInline
 							class="w-full h-full object-cover"
-						></video>
+						>
+							<track kind="captions" srclang="en" label="Local captions" />
+						</video>
 						<div class="absolute bottom-2 right-2 text-white text-xs bg-black/50 px-2 py-1 rounded">
 							You
 						</div>

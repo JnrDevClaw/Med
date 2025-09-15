@@ -1,19 +1,23 @@
-const fp = require('fastify-plugin');
-const { CeramicClient } = require('@ceramicnetwork/http-client');
-const { DID } = require('dids');
-const { Ed25519Provider } = require('key-did-provider-ed25519');
-const KeyDidResolver = require('key-did-resolver');
-// Use Buffer to decode hex seed (Buffer is a Uint8Array and works in Node.js)
-const { ComposeClient } = require('@composedb/client');
+import fp from 'fastify-plugin';
+import { CeramicClient } from '@ceramicnetwork/http-client';
+import { DID } from 'dids';
+import { Ed25519Provider } from 'key-did-provider-ed25519';
+import KeyDidResolver from 'key-did-resolver';
+import { ComposeClient } from '@composedb/client';
 
-module.exports = fp(async function (fastify, opts) {
+export default fp(async function (fastify, opts) {
   const ceramicApiUrl = process.env.CERAMIC_API_URL || 'https://ceramic-clay.3boxlabs.com';
+
+  // Initialize Ceramic client
   const ceramic = new CeramicClient(ceramicApiUrl);
 
+  // Create a DID for the server from a hex seed string
   const authenticateDID = async (seedHex) => {
     if (!seedHex) throw new Error('DID seed hex required');
-  const seed = Buffer.from(seedHex, 'hex');
-    if (seed.length !== 32) throw new Error('CERAMIC_SEED must decode to 32 bytes (64 hex chars)');
+    const seed = Buffer.from(seedHex, 'hex');
+    if (seed.length !== 32) {
+      throw new Error('CERAMIC_SEED must decode to 32 bytes (64 hex chars)');
+    }
     const provider = new Ed25519Provider(seed);
     const did = new DID({ provider, resolver: KeyDidResolver.getResolver() });
     await did.authenticate();
@@ -21,10 +25,12 @@ module.exports = fp(async function (fastify, opts) {
     return did;
   };
 
+  // Factory to create a ComposeDB client (optional, for graph-based schemas)
   const createComposeClient = (opts = {}) => new ComposeClient({ ceramic, ...opts });
 
   fastify.decorate('ceramic', { client: ceramic, createComposeClient, authenticateDID });
 
+  // Auto-authenticate server DID if seed provided
   const seedHex = process.env.CERAMIC_SEED;
   if (seedHex) {
     try {

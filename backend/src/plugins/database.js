@@ -1,16 +1,15 @@
-const fp = require('fastify-plugin');
-const knex = require('knex');
+import fp from 'fastify-plugin';
+import knex from 'knex';
 
-module.exports = fp(async function (fastify, opts) {
+export default fp(async function (fastify, opts) {
   const dbClient = process.env.DB_CLIENT || 'pg';
 
   if (dbClient === 'mongo') {
-    // register mongodb plugin (it will decorate fastify.mongo)
-    // lazy-require to avoid loading when not needed
-    const mongoPlugin = require('./mongodb');
+    // Dynamically register Mongo plugin
+    const { default: mongoPlugin } = await import('./mongodb.js');
     await mongoPlugin(fastify, opts);
 
-    // provide a thin adapter so existing code can call fastify.db(collectionName)
+    // Provide thin adapter so existing code can call fastify.db(collectionName)
     fastify.decorate('db', function (collectionName) {
       return fastify.mongo.getCollection(collectionName);
     });
@@ -33,11 +32,20 @@ module.exports = fp(async function (fastify, opts) {
       password: 'password',
       database: 'medplatform',
     },
-    pool: { min: 2, max: 10 },
-    migrations: { tableName: 'knex_migrations', directory: '../migrations' },
-    seeds: { directory: '../seeds' },
+    pool: {
+      min: 2,
+      max: 10,
+    },
+    migrations: {
+      tableName: 'knex_migrations',
+      directory: '../migrations',
+    },
+    seeds: {
+      directory: '../seeds',
+    },
   });
 
+  // Test database connection
   try {
     await db.raw('SELECT 1+1 as result');
     fastify.log.info('Database connected successfully');

@@ -1,19 +1,20 @@
-import { AIProvider, AIRequestContext, AIResponse } from './provider';
-import fetch from 'node-fetch';
+import { ProviderRegistry } from './provider.js';
 
-// Simple HuggingFace inference wrapper; real implementation would map model ids to HF endpoints
-export class HuggingFaceProvider implements AIProvider {
-  name = 'huggingface';
-  constructor(private apiKey: string, private baseUrl = 'https://api-inference.huggingface.co/models') {}
+export class HuggingFaceProvider {
+  constructor(apiKey, baseUrl = 'https://api-inference.huggingface.co/models') {
+    this.name = 'huggingface';
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+  }
 
-  supports(model: string): boolean {
+  supports(model) {
     return ['biogpt','mistral-med','clinical-bert'].includes(model);
   }
 
-  async invoke(ctx: AIRequestContext): Promise<AIResponse> {
+  async invoke(ctx) {
     const start = Date.now();
     // Map internal model names to HF repository names (placeholder mapping)
-    const repoMap: Record<string,string> = {
+    const repoMap = {
       'biogpt': 'microsoft/BioGPT-Large',
       'mistral-med': 'mistralai/Mistral-7B-Instruct-v0.3',
       'clinical-bert': 'emilyalsentzer/Bio_ClinicalBERT'
@@ -23,7 +24,9 @@ export class HuggingFaceProvider implements AIProvider {
     const payload = { inputs: buildPrompt(ctx) };
     let text = '';
     let confidence = 0.8;
+    
     try {
+      const fetch = (await import('undici')).fetch;
       const res = await fetch(`${this.baseUrl}/${repo}`, {
         method: 'POST',
         headers: {
@@ -32,10 +35,11 @@ export class HuggingFaceProvider implements AIProvider {
         },
         body: JSON.stringify(payload)
       });
+      
       if (!res.ok) {
         text = fallbackResponse(ctx);
       } else {
-        const json: any = await res.json();
+        const json = await res.json();
         // HF responses vary; attempt extraction
         if (Array.isArray(json) && json[0]?.generated_text) {
           text = json[0].generated_text;
@@ -62,13 +66,13 @@ export class HuggingFaceProvider implements AIProvider {
   }
 }
 
-function buildPrompt(ctx: AIRequestContext): string {
+function buildPrompt(ctx) {
   const history = (ctx.previousMessages || []).map(m => `${m.role}: ${m.content}`).join('\n');
   const symptoms = ctx.symptoms?.length ? `Symptoms: ${ctx.symptoms.join(', ')}` : '';
   return `${history}\n${symptoms}\nUser: ${ctx.message}\nAssistant:`;
 }
 
-function genericFollowUps(): string[] {
+function genericFollowUps() {
   return [
     'How long have you experienced these symptoms?',
     'Have you taken any medications?',
@@ -76,16 +80,18 @@ function genericFollowUps(): string[] {
   ];
 }
 
-function detectEscalation(message: string, symptoms?: string[]): boolean {
+function detectEscalation(message, symptoms) {
   const redFlags = ['chest pain','shortness of breath','unconscious','severe bleeding'];
   const text = `${message} ${(symptoms||[]).join(' ')}`.toLowerCase();
   return redFlags.some(f => text.includes(f));
 }
 
-function estimateTokens(text: string): number {
+function estimateTokens(text) {
   return Math.ceil(text.length / 4); // rough heuristic
 }
 
-function fallbackResponse(ctx: AIRequestContext): string {
+function fallbackResponse(ctx) {
   return 'Unable to retrieve model response currently. Providing generalized guidance: consult a licensed professional for a definitive assessment.';
 }
+
+export { HuggingFaceProvider };

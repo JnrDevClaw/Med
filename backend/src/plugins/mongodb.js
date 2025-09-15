@@ -1,7 +1,7 @@
-const fp = require('fastify-plugin');
-const { MongoClient } = require('mongodb');
+import fp from 'fastify-plugin';
+import { MongoClient } from 'mongodb';
 
-module.exports = fp(async function (fastify, opts) {
+export default fp(async (fastify, opts) => {
   const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
   const dbName = process.env.MONGO_DB || 'medplatform';
 
@@ -17,10 +17,7 @@ module.exports = fp(async function (fastify, opts) {
 
   const db = client.db(dbName);
 
-  // helper to get collections
-  function getCollection(name) {
-    return db.collection(name);
-  }
+  const getCollection = (name) => db.collection(name);
 
   fastify.decorate('mongo', { client, db, getCollection });
 

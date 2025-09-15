@@ -1,22 +1,18 @@
-import crypto from 'crypto';
+const crypto = require('crypto');
 
-export interface StoreOptions {
-  encrypt?: boolean;
-  filename?: string;
-  mimeType?: string;
-}
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-export interface StoredFileResult {
-  cid: string;
-  hash: string;
-  size: number;
-  encrypted: boolean;
-}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class FileStorageService {
-  constructor(private ipfs: any) {}
+  constructor(ipfs) {
+    this.ipfs = ipfs;
+  }
 
-  async store(buffer: Buffer, originalName: string, opts: StoreOptions = {}): Promise<StoredFileResult> {
+  async store(buffer, originalName, opts = {}) {
     const hash = crypto.createHash('sha256').update(buffer).digest('hex');
     // Encryption placeholder (currently passthrough)
     const toStore = buffer; // future: if opts.encrypt => AES-GCM
@@ -24,8 +20,10 @@ export class FileStorageService {
     return { cid, hash, size: buffer.length, encrypted: !!opts.encrypt };
   }
 
-  async retrieve(cid: string): Promise<Buffer> {
+  async retrieve(cid) {
     const data = await this.ipfs.getFile(cid);
     return Buffer.isBuffer(data) ? data : Buffer.from(data);
   }
 }
+
+export default FileStorageService;

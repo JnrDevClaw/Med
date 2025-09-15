@@ -1,15 +1,5 @@
 import fp from 'fastify-plugin';
-import { MongoClient, Db, Collection } from 'mongodb';
-
-declare module 'fastify' {
-  interface FastifyInstance {
-    mongo: {
-      client: MongoClient;
-      db: Db;
-      getCollection: (name: string) => Collection;
-    };
-  }
-}
+import { MongoClient } from 'mongodb';
 
 export default fp(async (fastify, opts) => {
   const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
@@ -20,14 +10,14 @@ export default fp(async (fastify, opts) => {
   try {
     await client.connect();
     fastify.log.info('Connected to MongoDB');
-  } catch (err: any) {
+  } catch (err) {
     fastify.log.error('MongoDB connection failed:', err);
     throw err;
   }
 
   const db = client.db(dbName);
 
-  const getCollection = (name: string) => db.collection(name);
+  const getCollection = (name) => db.collection(name);
 
   fastify.decorate('mongo', { client, db, getCollection });
 

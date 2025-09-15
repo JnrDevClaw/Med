@@ -11,7 +11,9 @@
 
 	// Mock DID authentication for demo
 	// In a real app, this would integrate with a DID wallet/provider
-	async function handleDIDLogin() {
+	async function handleDIDLogin(event?: Event) {
+		// If called from form onsubmit, prevent native submit
+		event?.preventDefault?.();
 		if (!did.trim()) {
 			error = 'Please enter a DID';
 			return;
@@ -146,7 +148,7 @@
 			</div>
 
 			<div class="card">
-				<form onsubmit|preventDefault={handleDIDLogin} class="space-y-6">
+				<form onsubmit={handleDIDLogin} class="space-y-6">
 					<div>
 						<label for="did" class="label">
 							Decentralized Identity (DID)
