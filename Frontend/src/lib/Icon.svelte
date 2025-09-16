@@ -1,34 +1,35 @@
-<script lang="ts">
+<script>
 	import { icons } from './icons.ts';
-	import { onMount } from 'svelte';
 
-	export interface Props {
-		name: keyof typeof icons;
-		class?: string;
-		size?: number;
+	// Accept flexible icon names (kebab or camelCase) to match usages across the codebase
+	export let name = '';
+	// allow parent to pass class/style/etc via rest props
+	export let size = null;
+
+	// helper to convert kebab-case to camelCase keys used in icons map
+	function toCamelCase(s) {
+		return s.replace(/-([a-z])/g, g => g[1].toUpperCase());
 	}
 
-	export let name: keyof typeof icons;
-	export let className: string = '';
-	export let size: number = 24;
-
-	// compute icon path without using legacy `$:` reactive rune
+	// reactive iconPath: recompute when `name` changes
 	let iconPath = '';
-	onMount(() => {
-		iconPath = icons[name] || '';
-	});
+	$: {
+		const key = name in icons ? name : toCamelCase(name || '');
+		iconPath = icons[key] || '';
+	}
 </script>
 
 <svg
-	class={className}
-	width={size}
-	height={size}
+	{...$$restProps}
+	width="1em"
+	height="1em"
 	viewBox="0 0 24 24"
 	fill="none"
 	stroke="currentColor"
 	stroke-width="2"
 	stroke-linecap="round"
 	stroke-linejoin="round"
+	style={size ? `font-size: ${size}px` : undefined}
 >
 	{#if iconPath}
 		{@html `<path d="${iconPath}"/>`}

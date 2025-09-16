@@ -1,15 +1,15 @@
-<script lang="ts">
+<script>
 	import { Icon } from '$lib/icons';
 	import { authStore } from '../stores/auth';
 	import { goto } from '$app/navigation';
 	import { createEventDispatcher, onDestroy } from 'svelte';
 
-	export let onMenuClick: () => void = () => {};
+	export let onMenuClick = () => {};
 
 	const dispatch = createEventDispatcher();
 	let showUserMenu = false;
 
-	let user: any = null;
+	let user = null;
 	const unsubscribe = authStore.subscribe(state => {
 		user = state?.user || null;
 	});
@@ -40,7 +40,7 @@
 	}
 </script>
 
-<header class="bg-white shadow-sm border-b border-gray-200">
+<header class="bg-white shadow-sm border-b border-med-gray-200">
 	<div class="flex items-center justify-between px-6 py-4">
 		<!-- Left side - Menu button and title -->
 		<div class="flex items-center space-x-4">
@@ -52,39 +52,39 @@
 				<Icon name="menu" class="w-5 h-5" />
 			</button>
 			
-			<h1 class="text-xl font-semibold text-gray-900">
-				MedPlatform
-			</h1>
+				<h1 class="text-xl font-semibold text-med-gray-900">
+					MedPlatform
+				</h1>
 		</div>
 
 		<!-- Right side - Notifications and user menu -->
 		<div class="flex items-center space-x-4">
 			<!-- Notifications -->
-			<button
-				type="button"
-				class="relative p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-			>
-				<Icon name="bell" class="w-5 h-5" />
-				<!-- Notification badge -->
-				<span class="absolute top-1 right-1 w-2 h-2 bg-error-500 rounded-full"></span>
-			</button>
+				<button
+					type="button"
+					class="relative p-2 rounded-md text-med-gray-500 hover:text-med-gray-900 hover:bg-med-gray-50 transition-colors"
+				>
+					<Icon name="bell" class="w-5 h-5" />
+					<!-- Notification badge -->
+					<span class="absolute top-1 right-1 w-2 h-2 bg-error-500 rounded-full"></span>
+				</button>
 
 			<!-- User menu -->
-			<div class="relative">
+				<div class="relative">
 				<button
 					type="button"
 					class="flex items-center space-x-3 p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
 					onclick={toggleUserMenu}
 				>
 					<div class="flex items-center space-x-2">
-						<div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+						<div class="w-8 h-8 bg-med-green-700 rounded-full flex items-center justify-center">
 							<span class="text-sm font-medium text-white">
 								{user?.name?.charAt(0)?.toUpperCase() || 'U'}
 							</span>
 						</div>
 						<div class="hidden md:block text-left">
-							<p class="text-sm font-medium text-gray-900">{user?.name}</p>
-							<p class="text-xs text-gray-500 capitalize">{user?.role}</p>
+							<p class="text-sm font-medium text-med-gray-900">{user?.name}</p>
+							<p class="text-xs text-med-gray-500 capitalize">{user?.role}</p>
 						</div>
 					</div>
 				</button>
@@ -134,8 +134,10 @@
 
 <!-- Click outside to close user menu -->
 {#if showUserMenu}
-	<div
+	<button
+		type="button"
 		class="fixed inset-0 z-40"
+		aria-label="Close user menu"
 		onclick={closeUserMenu}
-	></div>
+	></button>
 {/if}

@@ -1,119 +1,151 @@
-<script lang="ts">
+<script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$stores/auth';
 	import { toastStore } from '$stores/toast';
-	import { validateEmail } from '$utils/helpers';
 	import Icon from '$lib/Icon.svelte';
 
-	let isLoading = $state(false);
-	let step = $state(1); // 1: role selection, 2: DID generation, 3: profile setup
-	let selectedRole = $state<'patient' | 'doctor' | null>(null);
-	let generatedDID = $state('');
-	let profile = $state({
-		name: '',
-		email: '',
-		bio: '',
-		specializations: [] as string[],
-		experience: 0
-	});
-	let errors = $state<Record<string, string>>({});
+	let activeTab = 'patient';
+	let isLoading = false;
+	let error = '';
 
-	// Mock DID generation (in real app, this would use a proper DID library)
-	function generateDID(): string {
-		const keyId = 'z6Mk' + Math.random().toString(36).substr(2, 40);
-		return `did:key:${keyId}`;
+	// Common fields
+	let email = '';
+	let password = '';
+	let confirmPassword = '';
+	let firstName = '';
+	let lastName = '';
+	let phone = '';
+
+	// Doctor-specific reactive state
+	let medicalLicense = '';
+	let specialization = '';
+	let yearsExperience = '';
+	let certificates = null;
+	let certificatePreview = [];
+
+	// Doctor-specific fields
+	function switchTab(tab) {
+		activeTab = tab;
+		clearForm();
 	}
 
-	function selectRole(role: 'patient' | 'doctor') {
-		selectedRole = role;
-		step = 2;
-		
-		// Generate a new DID
-		generatedDID = generateDID();
+	function clearForm() {
+		email = '';
+		password = '';
+		confirmPassword = '';
+		firstName = '';
+		lastName = '';
+		phone = '';
+		medicalLicense = '';
+		specialization = '';
+		yearsExperience = '';
+		certificates = null;
+		certificatePreview = [];
+		error = '';
 	}
 
-	function validateProfile(): boolean {
-		errors = {};
+	function handleCertificateUpload(event) {
+		const target = event.target;
+		certificates = target && target.files ? target.files : null;
 		
-		if (!profile.name.trim()) {
-			errors.name = 'Name is required';
+		if (certificates) {
+			certificatePreview = [];
+			Array.from(certificates).forEach(file => {
+				if (file.type.startsWith('image/')) {
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						if (e && e.target && e.target.result) {
+							certificatePreview = [...certificatePreview, e.target.result];
+						}
+					};
+					reader.readAsDataURL(file);
+				} else {
+					certificatePreview = [...certificatePreview, '📄 ' + file.name];
+				}
+			});
 		}
-		
-		if (profile.email && !validateEmail(profile.email)) {
-			errors.email = 'Please enter a valid email address';
-		}
-		
-		if (selectedRole === 'doctor') {
-			if (!profile.bio.trim()) {
-				errors.bio = 'Bio is required for doctors';
-			}
-			
-			if (profile.specializations.length === 0) {
-				errors.specializations = 'At least one specialization is required';
-			}
-			
-			if (profile.experience < 0) {
-				errors.experience = 'Experience must be a positive number';
-			}
-		}
-		
-		return Object.keys(errors).length === 0;
 	}
 
-	async function handleSignup(event?: Event) {
-		event?.preventDefault?.();
-		if (!selectedRole || !validateProfile()) {
-			return;
-		}
+	async function handleSignup(event) {
+		event.preventDefault();
+		
+		if (!validateForm()) return;
 
 		isLoading = true;
+		error = '';
 
 		try {
-			const signupData = {
-				name: profile.name,
-				role: selectedRole,
-				email: profile.email || undefined
-			};
+			const formData = new FormData();
+			formData.append('userType', activeTab);
+			formData.append('email', email);
+			formData.append('password', password);
+			formData.append('firstName', firstName);
+			formData.append('lastName', lastName);
+			formData.append('phone', phone);
 
-			const result = await authStore.signup(generatedDID, signupData);
+			if (activeTab === 'doctor') {
+				formData.append('medicalLicense', medicalLicense);
+				formData.append('specialization', specialization);
+				formData.append('yearsExperience', yearsExperience);
+				
+				if (certificates) {
+					Array.from(certificates).forEach(file => {
+						formData.append('certificates', file);
+					});
+				}
+			}
+
+			const result = await authStore.register(formData);
 
 			if (result.success) {
 				toastStore.success(
-					'Account created successfully!',
-					'You can now sign in with your DID.'
+					'Registration successful!', 
+					activeTab === 'doctor' 
+						? 'Your account is pending verification. You will receive an email once approved.'
+						: 'Welcome to MedConnect! You can now access your dashboard.'
 				);
-				goto('/auth/login');
+				goto(activeTab === 'doctor' ? '/auth/login' : '/dashboard');
 			} else {
-				toastStore.error('Signup failed', result.error);
+				error = result.error || 'Registration failed';
 			}
-		} catch (err: any) {
-			toastStore.error('Signup failed', err.message);
+		} catch (err) {
+			error = err?.message || 'Registration failed';
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	function goBack() {
-		if (step > 1) {
-			step--;
-		} else {
-			goto('/auth/login');
+	function validateForm() {
+		if (!email || !password || !confirmPassword || !firstName || !lastName || !phone) {
+			error = 'Please fill in all required fields';
+			return false;
 		}
+
+		if (password !== confirmPassword) {
+			error = 'Passwords do not match';
+			return false;
+		}
+
+		if (password.length < 8) {
+			error = 'Password must be at least 8 characters long';
+			return false;
+		}
+
+		if (activeTab === 'doctor' && (!medicalLicense || !specialization || !yearsExperience)) {
+			error = 'Please fill in all doctor-specific fields';
+			return false;
+		}
+
+		return true;
 	}
 
-	function addSpecialization() {
-		const input = document.getElementById('specialization-input') as HTMLInputElement;
-		const value = input.value.trim();
-		
-		if (value && !profile.specializations.includes(value)) {
-			profile.specializations = [...profile.specializations, value];
-			input.value = '';
-		}
+	function goToLogin() {
+		goto('/auth/login');
 	}
 
-	function removeSpecialization(spec: string) {
-		profile.specializations = profile.specializations.filter(s => s !== spec);
+	function goHome() {
+		goto('/');
 	}
 
 	onMount(() => {
@@ -125,294 +157,353 @@
 </script>
 
 <svelte:head>
-	<title>Create Account - MedPlatform</title>
-	<meta name="description" content="Create your secure MedPlatform account with decentralized identity" />
+	<title>Sign Up - MedConnect</title>
+	<meta name="description" content="Create your MedConnect account as a patient or medical professional" />
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-br from-primary-800 via-primary-700 to-secondary-900 flex flex-col justify-center px-6 py-12 text-white">
-	<div class="sm:mx-auto sm:w-full sm:max-w-2xl">
-		<!-- Header -->
-		<div class="text-center mb-10">
-			<div class="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400 to-pink-500 rounded-2xl flex items-center justify-center mb-4 shadow-xl">
-				<span class="text-white font-extrabold text-xl">MP</span>
+<div class="min-h-screen bg-gradient-to-br from-med-gray-50 to-med-green-50">
+	<!-- Navigation -->
+	<nav class="bg-white shadow-sm">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="flex justify-between items-center h-16">
+				<button 
+					class="flex items-center space-x-2"
+					onclick={goHome}
+				>
+					<div class="w-8 h-8 bg-med-green-700 rounded-full flex items-center justify-center">
+						<Icon name="stethoscope" class="w-5 h-5 text-white" />
+					</div>
+					<span class="text-xl font-bold text-med-gray-900">MedConnect</span>
+				</button>
+				<button 
+					class="text-med-gray-600 hover:text-med-green-700 font-medium"
+					onclick={goToLogin}
+				>
+					Already have an account? Login
+				</button>
 			</div>
-			<h2 class="text-4xl font-extrabold tracking-tight">
-				Create your MedPlatform account
-			</h2>
-			<p class="mt-2 text-primary-200 max-w-xl mx-auto">
-				Join the decentralized healthcare platform with enterprise-grade privacy and AI assistance.
-			</p>
 		</div>
+	</nav>
 
-	<div class="card glass p-8 shadow-2xl border border-white/10 bg-white/5">
-			<!-- Progress indicator -->
-			<div class="mb-6">
-				<div class="flex items-center justify-between text-sm">
-					<span class="text-gray-500">Step {step} of 3</span>
+	<div class="flex flex-col justify-center px-6 py-12 lg:px-8">
+		<div class="sm:mx-auto sm:w-full sm:max-w-2xl">
+			<div class="text-center mb-8">
+				<h2 class="text-3xl font-bold text-med-gray-900">
+					Create your MedConnect account
+				</h2>
+				<p class="mt-2 text-med-gray-600">
+					Join our secure healthcare platform and connect with medical professionals
+				</p>
+			</div>
+
+			<!-- Tab Switcher -->
+			<div class="mb-8">
+				<div class="bg-white rounded-xl shadow-md p-1 flex max-w-md mx-auto">
 					<button
-						type="button"
-						class="text-primary-600 hover:text-primary-500 flex items-center"
-						onclick={goBack}
+						class="flex-1 py-2 px-4 text-sm font-medium rounded-lg transition duration-200 {activeTab === 'patient' 
+							? 'bg-med-green-700 text-white' 
+							: 'text-med-gray-600 hover:text-med-green-700'}"
+						onclick={() => switchTab('patient')}
 					>
-						<Icon name="arrow-left" class="w-4 h-4 mr-1" />
-						Back
+						<div class="flex items-center justify-center space-x-2">
+							<Icon name="user" class="w-4 h-4" />
+							<span>I'm a Patient</span>
+						</div>
 					</button>
-				</div>
-				<div class="mt-2 w-full bg-gray-200 rounded-full h-2">
-					<div
-						class="bg-primary-600 h-2 rounded-full transition-all duration-300"
-						style="width: {(step / 3) * 100}%"
-					></div>
+					<button
+						class="flex-1 py-2 px-4 text-sm font-medium rounded-lg transition duration-200 {activeTab === 'doctor' 
+							? 'bg-med-green-700 text-white' 
+							: 'text-med-gray-600 hover:text-med-green-700'}"
+						onclick={() => switchTab('doctor')}
+					>
+						<div class="flex items-center justify-center space-x-2">
+							<Icon name="stethoscope" class="w-4 h-4" />
+							<span>I'm a Doctor</span>
+						</div>
+					</button>
 				</div>
 			</div>
 
-			{#if step === 1}
-				<!-- Step 1: Role Selection -->
-				<div class="space-y-4">
-					<h3 class="text-lg font-medium text-gray-900 text-center mb-6">
-						What describes you best?
-					</h3>
-					
-					<button
-						type="button"
-						class="w-full p-6 rounded-lg bg-white/5 hover:bg-white/10 transition-shadow border border-white/10 shadow-sm text-left"
-						onclick={() => selectRole('patient')}
-					>
-						<div class="flex items-start space-x-4">
-							<div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-								<Icon name="user" class="w-6 h-6 text-primary-600" />
-							</div>
-							<div>
-								<h4 class="text-lg font-medium text-gray-900">I'm a Patient</h4>
-								<p class="text-gray-600">
-									Looking for medical consultations, AI assistance, and healthcare services
-								</p>
-							</div>
-						</div>
-					</button>
-					
-					<button
-						type="button"
-						class="w-full p-6 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-colors text-left text-white shadow-lg"
-						onclick={() => selectRole('doctor')}
-					>
-						<div class="flex items-start space-x-4">
-							<div class="w-12 h-12 bg-success-100 rounded-lg flex items-center justify-center">
-								<Icon name="stethoscope" class="w-6 h-6 text-success-600" />
-							</div>
-							<div>
-								<h4 class="text-lg font-medium text-gray-900">I'm a Healthcare Provider</h4>
-								<p class="text-gray-600">
-									Offering medical consultations and healthcare services to patients
-								</p>
-							</div>
-						</div>
-					</button>
-				</div>
-
-			{:else if step === 2}
-				<!-- Step 2: DID Generation -->
-				<div class="space-y-6">
-					<div class="text-center">
-						<h3 class="text-lg font-medium text-gray-900 mb-2">
-							Your Decentralized Identity
-						</h3>
-						<p class="text-gray-600 text-sm">
-							We've generated a unique DID for you. This is your secure, decentralized identity.
-						</p>
-					</div>
-					
-					<div class="bg-white/5 p-4 rounded-lg border border-white/6">
-						<label class="label text-primary-100">Your DID</label>
-						<div class="flex items-center space-x-2">
-							<input
-								type="text"
-								value={generatedDID}
-								readonly
-								class="input bg-transparent text-white border-white/10"
-							/>
-							<button
-								type="button"
-								class="btn-primary-outline px-3 py-2 text-sm text-white/90 border-white/10"
-								onclick={() => navigator.clipboard.writeText(generatedDID)}
-							>
-								Copy
-							</button>
-						</div>
-						<p class="text-xs text-primary-200 mt-2">
-							💡 Save this DID safely. You'll need it to sign in to your account.
-						</p>
-					</div>
-					
-					<div class="bg-warning-900/20 border border-warning-800 rounded-lg p-4">
-						<div class="flex items-start">
-							<div class="flex-shrink-0">
-								<span class="text-warning-600">⚠️</span>
-							</div>
-							<div class="ml-3">
-								<h4 class="text-sm font-medium text-warning-800">Important</h4>
-								<p class="text-sm text-warning-700 mt-1">
-									Your DID is your only way to access your account. Make sure to save it securely 
-									before proceeding.
-								</p>
-							</div>
-						</div>
-					</div>
-					
-					<button
-						type="button"
-						class="btn-primary w-full"
-						onclick={() => step = 3}
-					>
-						I've saved my DID - Continue
-					</button>
-				</div>
-
-			{:else if step === 3}
-				<!-- Step 3: Profile Setup -->
+			<div class="card">
 				<form onsubmit={handleSignup} class="space-y-6">
-					<div class="text-center mb-4">
-						<h3 class="text-lg font-medium text-gray-900">
-							Complete your profile
-						</h3>
-						<p class="text-gray-600 text-sm">
-							Role: <span class="font-medium capitalize">{selectedRole}</span>
-						</p>
-					</div>
-					
 					<!-- Basic Information -->
-					<div class="space-y-4">
-						<div>
-							<label for="name" class="label">Full Name *</label>
-							<input
-								id="name"
-								type="text"
-								required
-								bind:value={profile.name}
-								placeholder="Enter your full name"
-								class="input {errors.name ? 'input-error' : ''}"
-							/>
-							{#if errors.name}
-								<p class="mt-1 text-sm text-error-600">{errors.name}</p>
-							{/if}
+					<div>
+						<h3 class="text-lg font-medium text-med-gray-900 mb-4">Basic Information</h3>
+						<div class="grid md:grid-cols-2 gap-4">
+							<div>
+								<label for="firstName" class="block text-sm font-medium text-med-gray-900 mb-2">
+									First Name *
+								</label>
+								<input
+									id="firstName"
+									type="text"
+									required
+									bind:value={firstName}
+									placeholder="John"
+									class="input-field"
+									disabled={isLoading}
+								/>
+							</div>
+							<div>
+								<label for="lastName" class="block text-sm font-medium text-med-gray-900 mb-2">
+									Last Name *
+								</label>
+								<input
+									id="lastName"
+									type="text"
+									required
+									bind:value={lastName}
+									placeholder="Doe"
+									class="input-field"
+									disabled={isLoading}
+								/>
+							</div>
 						</div>
 						
-						<div>
-							<label for="email" class="label">Email (Optional)</label>
+						<div class="mt-4">
+							<label for="email" class="block text-sm font-medium text-med-gray-900 mb-2">
+								Email Address *
+							</label>
 							<input
 								id="email"
 								type="email"
-								bind:value={profile.email}
-								placeholder="your@email.com"
-								class="input {errors.email ? 'input-error' : ''}"
+								required
+								bind:value={email}
+								placeholder="john@example.com"
+								class="input-field"
+								disabled={isLoading}
 							/>
-							{#if errors.email}
-								<p class="mt-1 text-sm text-error-600">{errors.email}</p>
-							{/if}
+						</div>
+
+						<div class="mt-4">
+							<label for="phone" class="block text-sm font-medium text-med-gray-900 mb-2">
+								Phone Number *
+							</label>
+							<input
+								id="phone"
+								type="tel"
+								required
+								bind:value={phone}
+								placeholder="+1 (555) 123-4567"
+								class="input-field"
+								disabled={isLoading}
+							/>
+						</div>
+
+						<div class="grid md:grid-cols-2 gap-4 mt-4">
+							<div>
+								<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
+									Password *
+								</label>
+								<input
+									id="password"
+									type="password"
+									required
+									bind:value={password}
+									placeholder="Min. 8 characters"
+									class="input-field"
+									disabled={isLoading}
+								/>
+							</div>
+							<div>
+								<label for="confirmPassword" class="block text-sm font-medium text-med-gray-900 mb-2">
+									Confirm Password *
+								</label>
+								<input
+									id="confirmPassword"
+									type="password"
+									required
+									bind:value={confirmPassword}
+									placeholder="Repeat password"
+									class="input-field"
+									disabled={isLoading}
+								/>
+							</div>
 						</div>
 					</div>
-					
-					{#if selectedRole === 'doctor'}
-						<!-- Doctor-specific fields -->
-						<div class="space-y-4 pt-4 border-t border-gray-200">
-							<h4 class="font-medium text-gray-900">Professional Information</h4>
-							
-							<div>
-								<label for="bio" class="label">Professional Bio *</label>
-								<textarea
-									id="bio"
-									bind:value={profile.bio}
-									placeholder="Tell patients about your experience and expertise..."
-									rows="3"
-									class="input {errors.bio ? 'input-error' : ''}"
-								></textarea>
-								{#if errors.bio}
-									<p class="mt-1 text-sm text-error-600">{errors.bio}</p>
-								{/if}
-							</div>
-							
-							<div>
-								<label for="specializations" class="label">Specializations *</label>
-								<div class="flex space-x-2 mb-2">
+
+					<!-- Doctor-specific fields -->
+					{#if activeTab === 'doctor'}
+						<div class="pt-6 border-t border-gray-200">
+							<h3 class="text-lg font-medium text-med-gray-900 mb-4">
+								Medical Credentials
+								<span class="badge-verified ml-2">
+									<svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+									</svg>
+									Verification Required
+								</span>
+							</h3>
+
+							<div class="space-y-4">
+								<div>
+									<label for="medicalLicense" class="block text-sm font-medium text-med-gray-900 mb-2">
+										Medical License Number *
+									</label>
 									<input
-										id="specialization-input"
+										id="medicalLicense"
 										type="text"
-										placeholder="Add a specialization..."
-										class="input flex-1"
-										onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialization())}
+										required
+										bind:value={medicalLicense}
+										placeholder="e.g., MD123456"
+										class="input-field"
+										disabled={isLoading}
 									/>
-									<button
-										type="button"
-										class="btn-outline px-4"
-										onclick={addSpecialization}
-									>
-										Add
-									</button>
 								</div>
-								{#if profile.specializations.length > 0}
-									<div class="flex flex-wrap gap-2">
-										{#each profile.specializations as spec}
-											<span class="badge-primary flex items-center">
-												{spec}
-												<button
-													type="button"
-													class="ml-1 text-primary-600 hover:text-primary-800"
-													onclick={() => removeSpecialization(spec)}
-												>
-													×
-												</button>
-											</span>
-										{/each}
+
+								<div class="grid md:grid-cols-2 gap-4">
+									<div>
+										<label for="specialization" class="block text-sm font-medium text-med-gray-900 mb-2">
+											Specialization *
+										</label>
+										<select
+											id="specialization"
+											required
+											bind:value={specialization}
+											class="input-field"
+											disabled={isLoading}
+										>
+											<option value="">Select specialization</option>
+											<option value="cardiology">Cardiology</option>
+											<option value="dermatology">Dermatology</option>
+											<option value="endocrinology">Endocrinology</option>
+											<option value="family-medicine">Family Medicine</option>
+											<option value="gastroenterology">Gastroenterology</option>
+											<option value="general-surgery">General Surgery</option>
+											<option value="internal-medicine">Internal Medicine</option>
+											<option value="neurology">Neurology</option>
+											<option value="oncology">Oncology</option>
+											<option value="pediatrics">Pediatrics</option>
+											<option value="psychiatry">Psychiatry</option>
+											<option value="radiology">Radiology</option>
+											<option value="orthopedics">Orthopedics</option>
+											<option value="other">Other</option>
+										</select>
 									</div>
-								{/if}
-								{#if errors.specializations}
-									<p class="mt-1 text-sm text-error-600">{errors.specializations}</p>
-								{/if}
-							</div>
-							
-							<div>
-								<label for="experience" class="label">Years of Experience</label>
-								<input
-									id="experience"
-									type="number"
-									min="0"
-									bind:value={profile.experience}
-									placeholder="0"
-									class="input {errors.experience ? 'input-error' : ''}"
-								/>
-								{#if errors.experience}
-									<p class="mt-1 text-sm text-error-600">{errors.experience}</p>
-								{/if}
+
+									<div>
+										<label for="yearsExperience" class="block text-sm font-medium text-med-gray-900 mb-2">
+											Years of Experience *
+										</label>
+										<select
+											id="yearsExperience"
+											required
+											bind:value={yearsExperience}
+											class="input-field"
+											disabled={isLoading}
+										>
+											<option value="">Select experience</option>
+											<option value="0-2">0-2 years</option>
+											<option value="3-5">3-5 years</option>
+											<option value="6-10">6-10 years</option>
+											<option value="11-15">11-15 years</option>
+											<option value="16-20">16-20 years</option>
+											<option value="20+">20+ years</option>
+										</select>
+									</div>
+								</div>
+
+								<div>
+									<label for="certificates" class="block text-sm font-medium text-med-gray-900 mb-2">
+										Upload Medical Certificates (Optional)
+									</label>
+									<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-med-green-500 transition duration-200">
+										<div class="text-center">
+											<svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+												<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+											</svg>
+											<p class="mt-2 text-sm text-gray-600">
+												<label for="certificates" class="cursor-pointer font-medium text-med-green-700 hover:text-med-green-600">
+													Upload files
+												</label>
+												or drag and drop
+											</p>
+											<p class="text-xs text-gray-500">PNG, JPG, PDF up to 10MB each</p>
+										</div>
+									</div>
+									<input
+										id="certificates"
+										type="file"
+										multiple
+										accept="image/*,.pdf"
+										class="hidden"
+										onchange={handleCertificateUpload}
+										disabled={isLoading}
+									/>
+
+									{#if certificatePreview.length > 0}
+										<div class="mt-3 grid grid-cols-2 gap-2">
+											{#each certificatePreview as preview}
+												<div class="flex items-center space-x-2 p-2 bg-med-green-50 rounded-lg">
+													{#if preview.startsWith('data:image')}
+														<img src={preview} alt="Certificate" class="w-10 h-10 object-cover rounded" />
+													{:else}
+														<span class="text-sm">{preview}</span>
+													{/if}
+												</div>
+											{/each}
+										</div>
+									{/if}
+								</div>
+
+								<div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+									<div class="flex items-start">
+										<svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+											<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+										</svg>
+										<div class="ml-3">
+											<h4 class="text-sm font-medium text-blue-800">Doctor Verification Process</h4>
+											<p class="text-sm text-blue-700 mt-1">
+												Your account will be reviewed by our medical team. This usually takes 1-2 business days. You'll receive an email once verified.
+											</p>
+										</div>
+									</div>
+								</div>
 							</div>
 						</div>
 					{/if}
-					
+
+					{#if error}
+						<div class="bg-med-red-700 bg-opacity-10 border border-med-red-700 text-med-red-700 px-4 py-3 rounded-xl">
+							<p class="text-sm">{error}</p>
+						</div>
+					{/if}
+
 					<button
 						type="submit"
 						class="btn-primary w-full"
 						disabled={isLoading}
 					>
 						{#if isLoading}
-							<div class="spinner w-4 h-4 mr-2"></div>
+							<div class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
 							Creating account...
 						{:else}
-							Create Account
+							Create {activeTab === 'doctor' ? 'Doctor' : 'Patient'} Account
 						{/if}
 					</button>
 				</form>
-			{/if}
 
-			<!-- Login link -->
-			<div class="mt-6 text-center">
-				<p class="text-sm text-gray-600">
-					Already have an account?
-					<button
-						type="button"
-						class="font-medium text-primary-600 hover:text-primary-500"
-						onclick={() => goto('/auth/login')}
-					>
-						Sign in
-					</button>
+				<div class="mt-6 text-center">
+					<p class="text-sm text-med-gray-600">
+						Already have an account?
+						<button
+							type="button"
+							class="font-medium text-med-green-700 hover:text-med-green-600"
+										onclick={goToLogin}
+						>
+							Sign in here
+						</button>
+					</p>
+				</div>
+			</div>
+
+			<!-- Terms notice -->
+			<div class="mt-8 text-center">
+				<p class="text-xs text-med-gray-500">
+					By creating an account, you agree to our 
+					and 
+					  <a href="/terms" class="text-med-green-700 hover:text-med-green-600">Terms of Service</a>
+		  <a href="/privacy" class="text-med-green-700 hover:text-med-green-600">Privacy Policy</a>
 				</p>
 			</div>
 		</div>

@@ -1,7 +1,8 @@
 <script>
 	import '../app.css';
+	import '$lib/theme.css';
 	import favicon from '$lib/assets/favicon.svg';
-	
+    
 	export let children;
 </script>
 

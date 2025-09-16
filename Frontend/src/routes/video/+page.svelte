@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$stores/auth';
@@ -7,24 +7,8 @@
 	import Sidebar from '$components/Sidebar.svelte';
 	import Icon from '$lib/Icon.svelte';
 
-	interface CallState {
-		isInCall: boolean;
-		isVideoEnabled: boolean;
-		isAudioEnabled: boolean;
-		isScreenSharing: boolean;
-		isFullscreen: boolean;
-		callDuration: number;
-		participantCount: number;
-	}
-
-	interface ChatMessage {
-		id: string;
-		sender: string;
-		message: string;
-		timestamp: Date;
-	}
-
-	let callState = $state<CallState>({
+	// Call state and chat messages (plain JS)
+	let callState = {
 		isInCall: false,
 		isVideoEnabled: true,
 		isAudioEnabled: true,
@@ -32,17 +16,17 @@
 		isFullscreen: false,
 		callDuration: 0,
 		participantCount: 1
-	});
+	};
 
-	let chatMessages = $state<ChatMessage[]>([]);
-	let chatInput = $state('');
-	let showChat = $state(false);
-	let localVideoRef;
-	let remoteVideoRef;
-	let localStream: MediaStream | null = null;
-	let callTimer: number;
-	let roomId = $state('');
-	let isJoining = $state(false);
+	let chatMessages = [];
+	let chatInput = '';
+	let showChat = false;
+	let localVideoRef = null;
+	let remoteVideoRef = null;
+	let localStream = null;
+	let callTimer;
+	let roomId = '';
+	let isJoining = false;
 
 	// Mock participant data
 	let participants = $state([
@@ -77,7 +61,7 @@
 			}
 			
 			return true;
-		} catch (error: any) {
+		} catch (error) {
 			toastStore.error('Camera access denied', 'Please allow camera and microphone access to join the call.');
 			return false;
 		}
@@ -130,8 +114,8 @@
 			}
 
 			toastStore.success('Connected', 'Successfully joined the video call.');
-		} catch (error: any) {
-			toastStore.error('Connection failed', error.message);
+		} catch (error) {
+			toastStore.error('Connection failed', error.message || String(error));
 		} finally {
 			isJoining = false;
 		}
@@ -206,14 +190,14 @@
 
 	function sendChatMessage() {
 		if (!chatInput.trim()) return;
-		
-		const message: ChatMessage = {
+
+		const message = {
 			id: Date.now().toString(),
 			sender: $authStore.user?.name || 'You',
 			message: chatInput.trim(),
 			timestamp: new Date()
 		};
-		
+
 		chatMessages = [...chatMessages, message];
 		chatInput = '';
 		
@@ -235,13 +219,13 @@
 		}, 1000);
 	}
 
-	function formatDuration(seconds: number): string {
+	function formatDuration(seconds) {
 		const mins = Math.floor(seconds / 60);
 		const secs = seconds % 60;
 		return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 	}
 
-	function generateRoomId(): string {
+	function generateRoomId() {
 		return Math.random().toString(36).substr(2, 8).toUpperCase();
 	}
 

@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { authStore } from '../stores/auth';
@@ -7,15 +7,15 @@
     import Sidebar from '../components/Sidebar.svelte';
     import Icon from './Icon.svelte';
 
-    let isLoading = $state(false);
-    let stats = $state({
+    let isLoading = false;
+    let stats = {
         consultations: 0,
         patients: 0,
         messages: 0,
         upcomingAppointments: 0
-    });
-    let recentActivity = $state<any[]>([]);
-    let upcomingAppointments = $state<any[]>([]);
+    };
+    let recentActivity = [];
+    let upcomingAppointments = [];
 
     async function loadDashboardData() {
         if (!$authStore.isAuthenticated) return;
@@ -130,29 +130,29 @@
                     }
                 ];
             }
-        } catch (error: any) {
-            toastStore.error('Failed to load dashboard', error.message);
+        } catch (error) {
+            toastStore.error('Failed to load dashboard', error.message || String(error));
         } finally {
             isLoading = false;
         }
     }
 
-    function getActivityIcon(type: string) {
+    function getActivityIconName(type) {
         switch (type) {
             case 'consultation':
-                return Stethoscope;
+                return 'stethoscope';
             case 'message':
-                return MessageSquare;
+                return 'message-square';
             case 'appointment':
-                return Calendar;
+                return 'calendar';
             case 'reminder':
-                return Clock;
+                return 'clock';
             default:
-                return Activity;
+                return 'activity';
         }
     }
 
-    function getStatusColor(status: string) {
+    function getStatusColor(status) {
         switch (status) {
             case 'completed':
                 return 'text-success-600 bg-success-100';
@@ -321,7 +321,7 @@
                                         {#each recentActivity as activity}
                                             <div class="flex items-start space-x-4">
                                                 <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                    <svelte:component this={getActivityIcon(activity.type)} class="w-5 h-5 text-gray-600" />
+                                                    <Icon name={getActivityIconName(activity.type)} class="w-5 h-5 text-gray-600" />
                                                 </div>
                                                 <div class="flex-1 min-w-0">
                                                     <p class="text-sm font-medium text-gray-900">

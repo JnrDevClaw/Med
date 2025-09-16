@@ -1,15 +1,15 @@
-<script lang="ts">
+<script>
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { authStore } from '../stores/auth';
 	import Icon from '$lib/Icon.svelte';
 	import { onDestroy } from 'svelte';
 
-	export let open: boolean = false;
-	export let onClose: () => void = () => {};
+	export let open = false;
+	export let onClose = () => {};
 
 	// subscribe to authStore to get user
-	let user: any = null;
+	let user = null;
 	const unsubscribeAuth = authStore.subscribe(state => {
 		user = state?.user || null;
 	});
@@ -25,7 +25,7 @@
 		unsubscribePage();
 	});
 
-	const patientNavItems = [
+	const patientNavItems: NavItem[] = [
 		{ href: '/dashboard', icon: 'home', label: 'Dashboard' },
 		{ href: '/consultations', icon: 'message-square', label: 'Consultations' },
 		{ href: '/ai-chat', icon: 'brain', label: 'AI Assistant' },
@@ -35,7 +35,7 @@
 		{ href: '/health-records', icon: 'file-text', label: 'Health Records' }
 	];
 
-	const doctorNavItems = [
+	const doctorNavItems: NavItem[] = [
 		{ href: '/dashboard', icon: 'home', label: 'Dashboard' },
 		{ href: '/consultations', icon: 'message-square', label: 'Consultations' },
 		{ href: '/video-calls', icon: 'video', label: 'Video Calls' },
@@ -48,22 +48,24 @@
 		return user?.role === 'doctor' ? doctorNavItems : patientNavItems;
 	}
 
-	function navigateTo(href: string) {
+	function navigateTo(href) {
 		goto(href);
 		onClose();
 	}
 
-	function isActive(href: string): boolean {
+	function isActive(href) {
 		return currentPath === href || (currentPath.startsWith(href) && href !== '/dashboard');
 	}
 </script>
 
 <!-- Mobile backdrop -->
 {#if open}
-	<div
+	<button
+		type="button"
 		class="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
+		aria-label="Close menu"
 		onclick={onClose}
-	></div>
+	></button>
 {/if}
 
 <!-- Sidebar -->

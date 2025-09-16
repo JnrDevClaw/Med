@@ -2,6 +2,8 @@ import devtoolsJson from 'vite-plugin-devtools-json';
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 export default defineConfig({
 	plugins: [
@@ -38,4 +40,16 @@ export default defineConfig({
 			}
 		]
 	}
+	,
+	resolve: {
+		alias: {
+			'$lib': path.resolve(fileURLToPath(new URL('.', import.meta.url)), 'src/lib'),
+			'$components': path.resolve(fileURLToPath(new URL('.', import.meta.url)), 'src/components'),
+			'$stores': path.resolve(fileURLToPath(new URL('.', import.meta.url)), 'src/stores'),
+			'$utils': path.resolve(fileURLToPath(new URL('.', import.meta.url)), 'src/utils'),
+			'$types': path.resolve(fileURLToPath(new URL('.', import.meta.url)), 'src/types')
+		}
+	}
 });
+
+

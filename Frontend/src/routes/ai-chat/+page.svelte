@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$stores/auth';
@@ -7,22 +7,15 @@
 	import Sidebar from '$components/Sidebar.svelte';
 	import Icon from '$lib/Icon.svelte';
 
-	interface Message {
-		id: string;
-		content: string;
-		sender: 'user' | 'ai';
-		timestamp: Date;
-		type?: 'text' | 'suggestions' | 'diagnosis' | 'emergency';
-		suggestions?: string[];
-		confidence?: number;
-	}
+	// Message shape (JS runtime, not TS)
+	// id, content, sender ('user'|'ai'), timestamp (Date), optional type/suggestions/confidence
 
-	let messages = $state<Message[]>([]);
-	let currentMessage = $state('');
-	let isLoading = $state(false);
-	let isListening = $state(false);
-	let messagesContainer: HTMLElement;
-	let chatInput: HTMLInputElement;
+	let messages = [];
+	let currentMessage = '';
+	let isLoading = false;
+	let isListening = false;
+	let messagesContainer;
+	let chatInput;
 
 	// Mock AI responses - in real app, this would call the backend API
 	const aiResponses = {
@@ -32,18 +25,18 @@
 		general: "Thank you for sharing that information. Based on what you've told me, here are some general recommendations:\n\n• Monitor your symptoms closely\n• Stay hydrated and get adequate rest\n• Consider over-the-counter remedies if appropriate\n\nHowever, if symptoms persist or worsen, I recommend consulting with a healthcare professional. Would you like me to help you find doctors in your area?"
 	};
 
-	function generateMessageId(): string {
+	function generateMessageId() {
 		return Date.now().toString() + Math.random().toString(36).substr(2, 9);
 	}
 
-	function addMessage(content: string, sender: 'user' | 'ai', type: 'text' | 'suggestions' | 'diagnosis' | 'emergency' = 'text', extras?: any) {
-		const message: Message = {
+	function addMessage(content, sender, type = 'text', extras) {
+		const message = {
 			id: generateMessageId(),
 			content,
 			sender,
 			timestamp: new Date(),
 			type,
-			...extras
+			...(extras || {})
 		};
 
 		messages = [...messages, message];
@@ -74,8 +67,8 @@
 
 			// Simple AI response logic (in real app, this would call your backend)
 			let response = '';
-			let messageType: 'text' | 'suggestions' | 'diagnosis' | 'emergency' = 'text';
-			let suggestions: string[] = [];
+			let messageType = 'text';
+			let suggestions = [];
 			let confidence = 0;
 
 			const lowerMessage = userMessage.toLowerCase();
@@ -129,14 +122,14 @@
 			// Add AI response
 			addMessage(response, 'ai', messageType, { suggestions, confidence });
 
-		} catch (error: any) {
-			toastStore.error('Failed to get AI response', error.message);
+		} catch (error) {
+			toastStore.error('Failed to get AI response', error.message || String(error));
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	function handleSuggestion(suggestion: string) {
+	function handleSuggestion(suggestion) {
 		currentMessage = suggestion;
 		sendMessage();
 	}
@@ -193,21 +186,20 @@
 		recognition.start();
 	}
 
-	function handleKeyDown(event: KeyboardEvent) {
+	function handleKeyDown(event) {
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
 			sendMessage();
 		}
 	}
-
-	function getMessageIcon(sender: 'user' | 'ai', type?: string) {
-		if (sender === 'user') return User;
-		if (type === 'emergency') return AlertCircle;
-		if (type === 'diagnosis') return CheckCircle;
-		return Bot;
+	function getMessageIconName(sender, type) {
+		if (sender === 'user') return 'user';
+		if (type === 'emergency') return 'alert-circle';
+		if (type === 'diagnosis') return 'check-circle';
+		return 'bot';
 	}
 
-	function getMessageColors(sender: 'user' | 'ai', type?: string) {
+	function getMessageColors(sender, type) {
 		if (sender === 'user') return 'bg-primary-600 text-white';
 		if (type === 'emergency') return 'bg-error-100 text-error-800 border border-error-200';
 		if (type === 'diagnosis') return 'bg-success-100 text-success-800 border border-success-200';
@@ -254,6 +246,7 @@
 						class="btn-outline"
 						onclick={clearChat}
 						title="Clear chat"
+						aria-label="Clear chat"
 					>
 						<Icon name="refresh-cw" class="w-4 h-4 mr-2" />
 						Clear
@@ -270,7 +263,7 @@
 					<div class="flex items-start space-x-3 {message.sender === 'user' ? 'justify-end' : ''}">
 						{#if message.sender === 'ai'}
 							<div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-								<svelte:component this={getMessageIcon(message.sender, message.type)} class="w-4 h-4 text-primary-600" />
+								<Icon name={getMessageIconName(message.sender, message.type)} class="w-4 h-4 text-primary-600" />
 							</div>
 						{/if}
 						
@@ -376,6 +369,7 @@
 							class="btn-primary px-4"
 							onclick={sendMessage}
 							disabled={isLoading || !currentMessage.trim()}
+							aria-label="Send message"
 						>
 							{#if isLoading}
 								<div class="spinner w-4 h-4"></div>
@@ -427,6 +421,18 @@
 
 <style>
 	.btn-outline-sm {
-		@apply px-3 py-1.5 text-sm border border-gray-300 text-gray-700 bg-white rounded-md hover:bg-gray-50 transition-colors;
+		padding-left: .75rem; /* px-3 */
+		padding-right: .75rem;
+		padding-top: .375rem; /* py-1.5 */
+		padding-bottom: .375rem;
+		font-size: .875rem; /* text-sm */
+		border: 1px solid rgba(156,163,175,1); /* border-gray-300 */
+		color: rgba(55,65,81,1); /* text-gray-700 */
+		background: white;
+		border-radius: .375rem; /* rounded-md */
+		transition: background-color .2s;
+	}
+	.btn-outline-sm:hover {
+		background: #f9fafb; /* bg-gray-50 */
 	}
 </style>

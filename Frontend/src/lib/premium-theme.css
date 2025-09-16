@@ -1,0 +1,534 @@
+/* MedConnect Premium Theme System */
+
+:root {
+  /* Premium Medical Colors (RGB values for Tailwind compatibility) */
+  --med-emerald-50: 236 253 245;
+  --med-emerald-100: 209 250 229;
+  --med-emerald-500: 16 185 129;
+  --med-emerald-600: 5 150 105;
+  --med-emerald-700: 4 120 87;
+  
+  --med-green-50: 240 253 244;
+  --med-green-100: 220 252 231;
+  --med-green-500: 34 197 94;
+  --med-green-600: 22 163 74;
+  --med-green-700: 21 128 61;
+  
+  --med-slate-50: 248 250 252;
+  --med-slate-100: 241 245 249;
+  --med-slate-200: 226 232 240;
+  --med-slate-300: 203 213 225;
+  --med-slate-500: 100 116 139;
+  --med-slate-600: 71 85 105;
+  --med-slate-700: 51 65 85;
+  --med-slate-800: 30 41 59;
+  --med-slate-900: 15 23 42;
+  
+  --med-sky-50: 240 249 255;
+  --med-sky-100: 224 242 254;
+  --med-sky-500: 14 165 233;
+  --med-sky-600: 2 132 199;
+  
+  --med-red-50: 254 242 242;
+  --med-red-100: 254 226 226;
+  --med-red-500: 239 68 68;
+  --med-red-600: 220 38 38;
+  
+  /* Premium Effects */
+  --shadow-premium: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-premium-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-premium-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-emerald: 0 4px 14px 0 rgba(16, 185, 129, 0.15);
+  --shadow-green: 0 4px 14px 0 rgba(34, 197, 94, 0.15);
+  
+  /* Premium transitions */
+  --transition-premium: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: all 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Premium Component Utilities */
+
+/* Modern Card Components */
+.med-card {
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid rgb(var(--med-slate-200));
+  box-shadow: var(--shadow-premium);
+  transition: var(--transition-premium);
+}
+
+.med-card:hover {
+  box-shadow: var(--shadow-premium-lg);
+  transform: translateY(-1px);
+}
+
+.med-card-premium {
+  background: white;
+  border-radius: 1.5rem;
+  border: 1px solid rgb(var(--med-slate-100));
+  box-shadow: var(--shadow-premium-lg);
+  backdrop-filter: blur(12px);
+  transition: var(--transition-premium);
+}
+
+.med-card-premium:hover {
+  box-shadow: var(--shadow-premium-xl);
+  transform: translateY(-2px);
+}
+
+.med-card-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-premium);
+}
+
+/* Premium Button System */
+.med-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-premium);
+  position: relative;
+  overflow: hidden;
+}
+
+.med-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.med-btn-primary {
+  background: rgb(var(--med-emerald-500));
+  color: white;
+  box-shadow: var(--shadow-emerald);
+}
+
+.med-btn-primary:hover:not(:disabled) {
+  background: rgb(var(--med-emerald-600));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-premium-lg), var(--shadow-emerald);
+}
+
+.med-btn-secondary {
+  background: rgb(var(--med-green-500));
+  color: white;
+  box-shadow: var(--shadow-green);
+}
+
+.med-btn-secondary:hover:not(:disabled) {
+  background: rgb(var(--med-green-600));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-premium-lg), var(--shadow-green);
+}
+
+.med-btn-outline {
+  background: transparent;
+  color: rgb(var(--med-emerald-600));
+  border: 1px solid rgb(var(--med-emerald-500));
+}
+
+.med-btn-outline:hover:not(:disabled) {
+  background: rgb(var(--med-emerald-50));
+  transform: translateY(-1px);
+}
+
+.med-btn-ghost {
+  background: transparent;
+  color: rgb(var(--med-slate-600));
+}
+
+.med-btn-ghost:hover:not(:disabled) {
+  background: rgb(var(--med-slate-100));
+}
+
+.med-btn-icon {
+  padding: 0.75rem;
+  border-radius: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-premium);
+}
+
+.med-btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.med-btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  border-radius: 1.25rem;
+}
+
+/* Premium Form Components */
+.med-input {
+  display: block;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgb(var(--med-slate-300));
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition: var(--transition-premium);
+  background: white;
+}
+
+.med-input:focus {
+  outline: none;
+  border-color: rgb(var(--med-emerald-500));
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.med-input::placeholder {
+  color: rgb(var(--med-slate-400));
+}
+
+.med-input:disabled {
+  background: rgb(var(--med-slate-50));
+  cursor: not-allowed;
+}
+
+.med-input-error {
+  border-color: rgb(var(--med-red-500));
+}
+
+.med-input-error:focus {
+  border-color: rgb(var(--med-red-500));
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.med-textarea {
+  min-height: 120px;
+  resize: none;
+}
+
+.med-select {
+  padding-right: 3rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+
+/* Premium Navigation */
+.med-nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  color: rgb(var(--med-slate-600));
+  font-weight: 500;
+  border-radius: 1rem;
+  transition: var(--transition-premium);
+  text-decoration: none;
+}
+
+.med-nav-link:hover {
+  color: rgb(var(--med-emerald-600));
+  background: rgb(var(--med-emerald-50));
+  transform: translateX(4px);
+}
+
+.med-nav-link.active {
+  color: rgb(var(--med-emerald-600));
+  background: rgb(var(--med-emerald-50));
+  border-right: 2px solid rgb(var(--med-emerald-500));
+}
+
+.med-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  color: rgb(var(--med-slate-700));
+  transition: var(--transition-premium);
+  border-radius: 1rem;
+  cursor: pointer;
+}
+
+.med-nav-item:hover {
+  color: rgb(var(--med-emerald-600));
+  background: rgb(var(--med-emerald-50));
+}
+
+/* Premium Badge System */
+.med-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+}
+
+.med-badge-success {
+  background: rgb(var(--med-green-100));
+  color: rgb(var(--med-green-700));
+}
+
+.med-badge-warning {
+  background: rgb(255 251 235);
+  color: rgb(180 83 9);
+}
+
+.med-badge-error {
+  background: rgb(var(--med-red-100));
+  color: rgb(var(--med-red-700));
+}
+
+.med-badge-info {
+  background: rgb(var(--med-sky-100));
+  color: rgb(var(--med-sky-600));
+}
+
+.med-badge-emerald {
+  background: rgb(var(--med-emerald-100));
+  color: rgb(var(--med-emerald-700));
+}
+
+/* Premium Layout Utilities */
+.med-container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.med-section {
+  padding: 3rem 0;
+}
+
+.med-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .med-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .med-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .med-container {
+    padding: 0 2rem;
+  }
+  
+  .med-section {
+    padding: 4rem 0;
+  }
+}
+
+/* Premium Typography */
+.med-heading-1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 2.5rem;
+  color: rgb(var(--med-slate-900));
+}
+
+.med-heading-2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 2.25rem;
+  color: rgb(var(--med-slate-800));
+}
+
+.med-heading-3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 2rem;
+  color: rgb(var(--med-slate-800));
+}
+
+.med-heading-4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+  color: rgb(var(--med-slate-700));
+}
+
+.med-text-body {
+  font-size: 1rem;
+  line-height: 1.75rem;
+  color: rgb(var(--med-slate-600));
+}
+
+.med-text-small {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: rgb(var(--med-slate-500));
+}
+
+@media (min-width: 1024px) {
+  .med-heading-1 {
+    font-size: 3rem;
+    line-height: 1;
+  }
+  
+  .med-heading-2 {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+}
+
+/* Loading & Animation States */
+.med-skeleton {
+  background: linear-gradient(90deg, rgb(var(--med-slate-200)) 25%, rgb(var(--med-slate-100)) 50%, rgb(var(--med-slate-200)) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.med-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid rgb(var(--med-slate-300));
+  border-top-color: rgb(var(--med-emerald-500));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Premium Focus States */
+.med-focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Status Indicators */
+.med-status-online {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: rgb(var(--med-green-500));
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.med-status-offline {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: rgb(var(--med-slate-400));
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.med-status-away {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: rgb(255 159 0);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 767px) {
+  .med-card,
+  .med-card-premium {
+    border-radius: 0.75rem;
+  }
+  
+  .med-btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.75rem;
+  }
+  
+  .med-input {
+    padding: 0.75rem 0.875rem;
+  }
+  
+  .med-container {
+    padding: 0 0.75rem;
+  }
+}
+
+/* Animation Classes */
+.med-animate-fade-in {
+  animation: fade-in 0.5s ease-in-out;
+}
+
+.med-animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.med-animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.med-animate-bounce-in {
+  animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { 
+    transform: translateY(10px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes slide-down {
+  from { 
+    transform: translateY(-10px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes bounce-in {
+  0% { 
+    transform: scale(0.3); 
+    opacity: 0; 
+  }
+  50% { 
+    transform: scale(1.05); 
+  }
+  70% { 
+    transform: scale(0.9); 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+}

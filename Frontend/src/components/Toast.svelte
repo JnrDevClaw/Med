@@ -1,11 +1,11 @@
-<script lang="ts">
+<script>
 	import { fade, fly } from 'svelte/transition';
 	import { toastStore } from '../stores/toast';
 	import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-svelte';
 
 	let toast = $toastStore;
 
-	function getIcon(type: string) {
+	function getIcon(type) {
 		switch (type) {
 			case 'success': return CheckCircle;
 			case 'error': return XCircle;
@@ -15,7 +15,7 @@
 		}
 	}
 
-	function getColors(type: string) {
+	function getColors(type) {
 		switch (type) {
 			case 'success': return 'bg-success-50 border-success-200 text-success-800';
 			case 'error': return 'bg-error-50 border-error-200 text-error-800';
@@ -25,7 +25,7 @@
 		}
 	}
 
-	function getIconColors(type: string) {
+	function getIconColors(type) {
 		switch (type) {
 			case 'success': return 'text-success-600';
 			case 'error': return 'text-error-600';
@@ -34,6 +34,10 @@
 			default: return 'text-primary-600';
 		}
 	}
+
+	// compute component to render for the icon; placed here to avoid using {@const} inside markup
+	let IconComponent = Info;
+	$: IconComponent = toast ? getIcon(toast.type) : Info;
 </script>
 
 {#if toast}
