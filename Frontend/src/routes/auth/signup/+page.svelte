@@ -224,7 +224,7 @@
 				</div>
 			</div>
 
-			<div class="card">
+			<div class="med-card-elevated">
 				<form onsubmit={handleSignup} class="space-y-6">
 					<!-- Basic Information -->
 					<div>
@@ -240,7 +240,7 @@
 									required
 									bind:value={firstName}
 									placeholder="John"
-									class="input-field"
+									class="med-input"
 									disabled={isLoading}
 								/>
 							</div>
@@ -254,7 +254,7 @@
 									required
 									bind:value={lastName}
 									placeholder="Doe"
-									class="input-field"
+									class="med-input"
 									disabled={isLoading}
 								/>
 							</div>
@@ -270,7 +270,7 @@
 								required
 								bind:value={email}
 								placeholder="john@example.com"
-								class="input-field"
+								class="med-input"
 								disabled={isLoading}
 							/>
 						</div>
@@ -285,7 +285,7 @@
 								required
 								bind:value={phone}
 								placeholder="+1 (555) 123-4567"
-								class="input-field"
+								class="med-input"
 								disabled={isLoading}
 							/>
 						</div>
@@ -301,7 +301,7 @@
 									required
 									bind:value={password}
 									placeholder="Min. 8 characters"
-									class="input-field"
+									class="med-input"
 									disabled={isLoading}
 								/>
 							</div>
@@ -315,7 +315,7 @@
 									required
 									bind:value={confirmPassword}
 									placeholder="Repeat password"
-									class="input-field"
+									class="med-input"
 									disabled={isLoading}
 								/>
 							</div>
@@ -346,7 +346,7 @@
 										required
 										bind:value={medicalLicense}
 										placeholder="e.g., MD123456"
-										class="input-field"
+										class="med-input"
 										disabled={isLoading}
 									/>
 								</div>
@@ -360,7 +360,7 @@
 											id="specialization"
 											required
 											bind:value={specialization}
-											class="input-field"
+											class="med-input"
 											disabled={isLoading}
 										>
 											<option value="">Select specialization</option>
@@ -389,7 +389,7 @@
 											id="yearsExperience"
 											required
 											bind:value={yearsExperience}
-											class="input-field"
+											class="med-input"
 											disabled={isLoading}
 										>
 											<option value="">Select experience</option>
@@ -471,7 +471,7 @@
 
 					<button
 						type="submit"
-						class="btn-primary w-full"
+						class="med-btn med-btn-primary w-full"
 						disabled={isLoading}
 					>
 						{#if isLoading}

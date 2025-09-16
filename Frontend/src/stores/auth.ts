@@ -42,6 +42,52 @@ function createAuthStore() {
 			}
 		},
 
+		async loginWithEmailPassword(email: string, password: string) {
+			try {
+				// For traditional email/password login, we create a mock DID and challenge
+				// In a real implementation, you'd want to integrate this with your DID system
+				const mockDid = `did:web:medconnect.app:users:${email}`;
+				
+				// Get challenge first
+				const challengeResponse = await api.get('/auth/challenge');
+				const { challenge } = challengeResponse;
+				
+				// Create a mock signature (in real implementation, this would be a proper DID signature)
+				const mockSignature = `mock_signature_${email}_${Date.now()}`;
+				
+				const response = await api.post('/auth/login', {
+					did: mockDid,
+					signature: mockSignature,
+					challenge
+				});
+
+				const { accessToken, refreshToken, user } = response;
+
+				if (browser) {
+					localStorage.setItem('accessToken', accessToken);
+					localStorage.setItem('refreshToken', refreshToken);
+					localStorage.setItem('user', JSON.stringify(user));
+				}
+
+				api.setAuthToken(accessToken);
+
+				set({
+					isAuthenticated: true,
+					user,
+					accessToken,
+					refreshToken
+				});
+
+				return { success: true };
+			} catch (error: any) {
+				console.error('Login failed:', error);
+				return { 
+					success: false, 
+					error: error.message || 'Login failed' 
+				};
+			}
+		},
+
 		async login(did: string, signature: string, challenge: string) {
 			try {
 				const response = await api.post('/auth/login', {
@@ -73,6 +119,48 @@ function createAuthStore() {
 				return { 
 					success: false, 
 					error: error.message || 'Login failed' 
+				};
+			}
+		},
+
+		async register(formData: FormData) {
+			try {
+				// Convert FormData to regular object for now
+				// In a real implementation, you'd want to integrate with your DID system
+				const userData: any = {};
+				for (let [key, value] of formData.entries()) {
+					if (key === 'certificates') {
+						if (!userData.certificates) userData.certificates = [];
+						userData.certificates.push(value);
+					} else {
+						userData[key] = value;
+					}
+				}
+
+				// For now, create a mock DID based on email (this should be replaced with actual DID integration)
+				const mockDid = `did:web:medconnect.app:users:${userData.email}`;
+				
+				const response = await api.post('/auth/signup', {
+					did: mockDid,
+					profile: {
+						name: `${userData.firstName} ${userData.lastName}`,
+						role: userData.userType,
+						email: userData.email,
+						phone: userData.phone,
+						...(userData.userType === 'doctor' && {
+							medicalLicense: userData.medicalLicense,
+							specialization: userData.specialization,
+							yearsExperience: userData.yearsExperience
+						})
+					}
+				});
+
+				return { success: true, user: response.user };
+			} catch (error: any) {
+				console.error('Registration failed:', error);
+				return { 
+					success: false, 
+					error: error.message || 'Registration failed' 
 				};
 			}
 		},

@@ -11,7 +11,7 @@
 	let error = '';
 
 	// Email/Password authentication
-	async function handleLogin(event: Event) {
+	async function handleLogin(event) {
 		event.preventDefault();
 		if (!email.trim() || !password.trim()) {
 			error = 'Please enter both email and password';
@@ -22,7 +22,7 @@
 		error = '';
 
 		try {
-			const result = await authStore.login(email, password);
+			const result = await authStore.loginWithEmailPassword(email, password);
 
 			if (result.success) {
 				toastStore.success('Welcome back!', 'You have successfully signed in.');
@@ -55,7 +55,7 @@
 
 <div class="min-h-screen bg-gradient-to-br from-med-gray-50 to-med-green-50 flex">
 	<!-- Left side - Hero section -->
-	<div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-med-green-700 to-med-green-500 text-white p-12 flex-col justify-center">
+	<div class="hidden lg:flex lg:w-1/2 med-gradient-primary text-white p-12 flex-col justify-center">
 		<div class="max-w-md">
 			<div class="flex items-center space-x-2 mb-6">
 				<div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
@@ -127,20 +127,20 @@
 				</p>
 			</div>
 
-			<div class="card">
-				<form onsubmit={handleLogin} class="space-y-6">
+				<div class="med-card-elevated">
+					<form onsubmit={handleLogin} class="space-y-6">
 					<div>
 						<label for="email" class="block text-sm font-medium text-med-gray-900 mb-2">
 							Email Address
 						</label>
-						<input
+							<input
 							id="email"
 							name="email"
 							type="email"
 							required
 							bind:value={email}
 							placeholder="doctor@medconnect.com"
-							class="input-field {error ? 'border-med-red-700 focus:ring-med-red-500' : ''}"
+								class="med-input {error ? 'border-med-error focus:ring-med-error' : ''}"
 							disabled={isLoading}
 						/>
 					</div>
@@ -149,14 +149,14 @@
 						<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
 							Password
 						</label>
-						<input
+							<input
 							id="password"
 							name="password"
 							type="password"
 							required
 							bind:value={password}
 							placeholder="Enter your password"
-							class="input-field {error ? 'border-med-red-700 focus:ring-med-red-500' : ''}"
+								class="med-input {error ? 'border-med-error focus:ring-med-error' : ''}"
 							disabled={isLoading}
 						/>
 					</div>
@@ -169,7 +169,7 @@
 
 					<button
 						type="submit"
-						class="btn-primary w-full"
+						class="med-btn med-btn-primary w-full"
 						disabled={isLoading}
 					>
 						{#if isLoading}

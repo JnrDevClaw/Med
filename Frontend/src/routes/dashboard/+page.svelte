@@ -14,8 +14,8 @@
 		messages: 0,
 		upcomingAppointments: 0
 	});
-	let recentActivity = $state<any[]>([]);
-	let upcomingAppointments = $state<any[]>([]);
+	let recentActivity = $state([]);
+	let upcomingAppointments = $state([]);
 
 	async function loadDashboardData() {
 		if (!$authStore.isAuthenticated) return;
@@ -309,7 +309,7 @@
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 					<!-- Recent Activity -->
 					<div class="lg:col-span-2">
-						<div class="card">
+						<div class="med-card-elevated">
 							<div class="p-6 border-b border-gray-200">
 								<h2 class="text-lg font-medium text-gray-900">Recent Activity</h2>
 							</div>
@@ -342,7 +342,7 @@
 
 					<!-- Upcoming Appointments -->
 					<div>
-						<div class="card">
+						<div class="med-card-elevated">
 							<div class="p-6 border-b border-gray-200">
 								<h2 class="text-lg font-medium text-gray-900">Upcoming Appointments</h2>
 							</div>

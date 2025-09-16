@@ -1,6 +1,6 @@
 <script>
-	export let className: string = '';
-	export let size: number = 24;
+	export let className = '';
+	export let size = 24;
 </script>
 
 <svg

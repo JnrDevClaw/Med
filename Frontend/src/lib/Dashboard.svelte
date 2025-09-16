@@ -210,7 +210,7 @@
                 <!-- Stats Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     {#if $authStore.user?.role === 'doctor'}
-                        <div class="card p-6">
+                        <div class="med-card-elevated p-6">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Total Consultations</p>
@@ -226,7 +226,7 @@
                             </div>
                         </div>
 
-                        <div class="card p-6">
+                        <div class="med-card-elevated p-6">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Active Patients</p>
@@ -242,7 +242,7 @@
                             </div>
                         </div>
                     {:else}
-                        <div class="card p-6">
+                        <div class="med-card-elevated p-6">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Health Score</p>
@@ -274,7 +274,7 @@
                         </div>
                     {/if}
 
-                    <div class="card p-6">
+                    <div class="med-card-elevated p-6">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-600">Messages</p>
@@ -289,7 +289,7 @@
                         </div>
                     </div>
 
-                    <div class="card p-6">
+                    <div class="med-card-elevated p-6">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-600">Appointments</p>
@@ -309,7 +309,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Recent Activity -->
                     <div class="lg:col-span-2">
-                        <div class="card">
+                        <div class="med-card-elevated">
                             <div class="p-6 border-b border-gray-200">
                                 <h2 class="text-lg font-medium text-gray-900">Recent Activity</h2>
                             </div>
@@ -342,7 +342,7 @@
 
                     <!-- Upcoming Appointments -->
                     <div>
-                        <div class="card">
+                        <div class="med-card-elevated">
                             <div class="p-6 border-b border-gray-200">
                                 <h2 class="text-lg font-medium text-gray-900">Upcoming Appointments</h2>
                             </div>

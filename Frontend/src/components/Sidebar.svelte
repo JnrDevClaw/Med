@@ -25,23 +25,23 @@
 		unsubscribePage();
 	});
 
-	const patientNavItems: NavItem[] = [
-		{ href: '/dashboard', icon: 'home', label: 'Dashboard' },
-		{ href: '/consultations', icon: 'message-square', label: 'Consultations' },
-		{ href: '/ai-chat', icon: 'brain', label: 'AI Assistant' },
-		{ href: '/video-calls', icon: 'video', label: 'Video Calls' },
-		{ href: '/doctors', icon: 'users', label: 'Find Doctors' },
-		{ href: '/reminders', icon: 'clock', label: 'Reminders' },
-		{ href: '/health-records', icon: 'file-text', label: 'Health Records' }
+	const patientNavItems = [
+		{ href: '/dashboard', icon: 'home', label: 'Dashboard', badge: null },
+		{ href: '/consultations', icon: 'message-square', label: 'Consultations', badge: '3' },
+		{ href: '/ai-chat', icon: 'brain', label: 'AI Assistant', badge: 'NEW' },
+		{ href: '/video-calls', icon: 'video', label: 'Video Calls', badge: null },
+		{ href: '/doctors', icon: 'users', label: 'Find Doctors', badge: null },
+		{ href: '/reminders', icon: 'bell', label: 'Reminders', badge: '2' },
+		{ href: '/health-records', icon: 'file-text', label: 'Health Records', badge: null }
 	];
 
-	const doctorNavItems: NavItem[] = [
-		{ href: '/dashboard', icon: 'home', label: 'Dashboard' },
-		{ href: '/consultations', icon: 'message-square', label: 'Consultations' },
-		{ href: '/video-calls', icon: 'video', label: 'Video Calls' },
-		{ href: '/patients', icon: 'users', label: 'Patients' },
-		{ href: '/credentials', icon: 'award', label: 'Credentials' },
-		{ href: '/schedule', icon: 'clock', label: 'Schedule' }
+	const doctorNavItems = [
+		{ href: '/dashboard', icon: 'home', label: 'Dashboard', badge: null },
+		{ href: '/consultations', icon: 'message-square', label: 'Consultations', badge: '5' },
+		{ href: '/video-calls', icon: 'video', label: 'Video Calls', badge: null },
+		{ href: '/patients', icon: 'users', label: 'Patients', badge: null },
+		{ href: '/credentials', icon: 'award', label: 'Credentials', badge: null },
+		{ href: '/schedule', icon: 'calendar', label: 'Schedule', badge: 'TODAY' }
 	];
 
 	function navItems() {
@@ -56,13 +56,18 @@
 	function isActive(href) {
 		return currentPath === href || (currentPath.startsWith(href) && href !== '/dashboard');
 	}
+
+	function getStaggerClass(index) {
+		const staggerClasses = ['med-animate-stagger-1', 'med-animate-stagger-2', 'med-animate-stagger-3', 'med-animate-stagger-4', 'med-animate-stagger-5'];
+		return staggerClasses[index % staggerClasses.length];
+	}
 </script>
 
-<!-- Mobile backdrop -->
+<!-- Mobile backdrop with glassmorphism -->
 {#if open}
 	<button
 		type="button"
-		class="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
+		class="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm z-40 lg:hidden med-animate-fade-in-up"
 		aria-label="Close menu"
 		onclick={onClose}
 	></button>
@@ -72,89 +77,184 @@
 <div class="flex">
 	<!-- Mobile sidebar -->
 	<div
-		class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:hidden {open ? 'translate-x-0' : '-translate-x-full'}"
+		class="fixed inset-y-0 left-0 z-50 w-80 glass-sidebar transform transition-all duration-500 ease-spring lg:hidden {open ? 'translate-x-0' : '-translate-x-full'}"
 	>
-		<div class="flex items-center justify-between p-4 border-b border-gray-200">
-			<h2 class="text-lg font-semibold text-gray-900">Menu</h2>
+		<!-- Mobile Header -->
+		<div class="flex items-center justify-between p-6 border-b border-primary-100">
+			<div class="flex items-center space-x-3">
+				<div class="w-10 h-10 rounded-2xl med-gradient-primary flex items-center justify-center shadow-medical">
+					<Icon name="activity" class="w-6 h-6 text-white" />
+				</div>
+				<h2 class="text-lg font-bold text-med-text-primary">MedPlatform</h2>
+			</div>
 			<button
 				type="button"
-				class="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+				class="p-2 rounded-xl text-med-text-secondary hover:text-primary-600 hover:bg-primary-50 transition-all duration-300 transform hover:scale-105"
 				onclick={onClose}
 			>
 				<Icon name="x" class="w-5 h-5" />
 			</button>
 		</div>
+
+		<!-- Mobile User Profile -->
+		<div class="p-6 border-b border-primary-100">
+			<div class="flex items-center space-x-4">
+				<div class="relative">
+					<div class="w-14 h-14 med-gradient-primary rounded-2xl flex items-center justify-center shadow-medical">
+						<span class="text-lg font-semibold text-white">
+							{user?.name?.charAt(0)?.toUpperCase() || 'U'}
+						</span>
+					</div>
+					<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-success-500 rounded-full border-2 border-white shadow-sm"></div>
+				</div>
+				<div class="flex-1">
+					<p class="font-semibold text-med-text-primary">{user?.name || 'User Name'}</p>
+					<p class="text-sm text-med-text-muted">{user?.email || 'user@example.com'}</p>
+					<div class="flex items-center space-x-2 mt-2">
+						<div class="med-badge med-badge-success text-xs">
+							{user?.role === 'doctor' ? 'Doctor' : 'Patient'}
+						</div>
+						{#if user?.verified}
+							<div class="med-badge med-badge-info text-xs">
+								Verified
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</div>
 		
-		<nav class="mt-4 px-4">
-			{#each navItems as item}
+		<!-- Mobile Navigation -->
+		<nav class="flex-1 p-6 space-y-2">
+			{#each navItems() as item, index}
 				<button
 					type="button"
-					class="flex items-center w-full px-3 py-2 mb-1 text-left rounded-lg transition-colors {isActive(item.href) 
-						? 'bg-primary-100 text-primary-700 border-r-2 border-primary-600' 
-						: 'text-gray-700 hover:bg-gray-100'}"
+					class="flex items-center justify-between w-full p-4 text-left rounded-2xl transition-all duration-300 med-nav-item group {getStaggerClass(index)} {isActive(item.href) 
+						? 'active med-gradient-glass border border-primary-200 shadow-medical' 
+						: 'hover:bg-primary-50 hover:shadow-soft'}"
 					onclick={() => navigateTo(item.href)}
 				>
-					<Icon name={item.icon} class="w-5 h-5 mr-3" />
-					{item.label}
+					<div class="flex items-center space-x-4">
+						<div class="w-10 h-10 rounded-xl {isActive(item.href) ? 'bg-primary-100 text-primary-600' : 'bg-neutral-100 text-med-text-muted group-hover:bg-primary-100 group-hover:text-primary-600'} flex items-center justify-center transition-all duration-300">
+							<Icon name={item.icon} class="w-5 h-5" />
+						</div>
+						<span class="font-medium {isActive(item.href) ? 'text-primary-700' : 'text-med-text-secondary group-hover:text-primary-700'}">
+							{item.label}
+						</span>
+					</div>
+					{#if item.badge}
+						<div class="med-badge {item.badge === 'NEW' ? 'med-badge-success' : 'med-badge-info'} text-xs">
+							{item.badge}
+						</div>
+					{/if}
 				</button>
 			{/each}
 		</nav>
 	</div>
 
 	<!-- Desktop sidebar -->
-	<div class="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-		<div class="flex flex-col flex-grow bg-white border-r border-gray-200 overflow-y-auto">
-			<!-- Logo/Brand -->
-			<div class="flex items-center flex-shrink-0 px-6 py-4 border-b border-gray-200">
-				<div class="flex items-center">
-					<div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-						<span class="text-white font-bold text-sm">MP</span>
+	<div class="hidden lg:flex lg:w-80 lg:flex-col lg:fixed lg:inset-y-0 lg:z-30">
+		<div class="flex flex-col flex-grow glass-sidebar overflow-y-auto">
+			<!-- Desktop Logo/Brand -->
+			<div class="flex items-center flex-shrink-0 px-8 py-6 border-b border-primary-100">
+				<div class="flex items-center space-x-4">
+					<div class="w-12 h-12 rounded-2xl med-gradient-primary flex items-center justify-center shadow-medical">
+						<Icon name="activity" class="w-7 h-7 text-white" />
 					</div>
-					<span class="ml-3 text-lg font-semibold text-gray-900">MedPlatform</span>
+					<div>
+						<span class="text-xl font-bold text-med-text-primary">MedPlatform</span>
+						<p class="text-xs text-med-text-muted mt-0.5">Healthcare Platform</p>
+					</div>
 				</div>
 			</div>
 
-			<!-- User info -->
-			<div class="px-6 py-4 border-b border-gray-200">
-				<div class="flex items-center">
-					<div class="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center">
-						<span class="text-white font-medium">
-							{user?.name?.charAt(0)?.toUpperCase() || 'U'}
-						</span>
-					</div>
-					<div class="ml-3">
-						<p class="text-sm font-medium text-gray-900">{user?.name}</p>
-						<p class="text-xs text-gray-500 capitalize">{user?.role}</p>
-						{#if user?.verified}
-							<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-100 text-success-800 mt-1">
-								Verified
+			<!-- Desktop User info -->
+			<div class="px-8 py-6 border-b border-primary-100">
+				<div class="flex items-center space-x-4">
+					<div class="relative">
+						<div class="w-16 h-16 med-gradient-primary rounded-2xl flex items-center justify-center shadow-medical">
+							<span class="text-xl font-semibold text-white">
+								{user?.name?.charAt(0)?.toUpperCase() || 'U'}
 							</span>
-						{/if}
+						</div>
+						<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-success-500 rounded-full border-2 border-white shadow-sm animate-pulse"></div>
+					</div>
+					<div class="flex-1">
+						<p class="font-semibold text-med-text-primary text-base">{user?.name || 'User Name'}</p>
+						<p class="text-sm text-med-text-muted">{user?.email || 'user@example.com'}</p>
+						<div class="flex items-center space-x-2 mt-3">
+							<div class="med-badge med-badge-success">
+								{user?.role === 'doctor' ? 'Doctor' : 'Patient'}
+							</div>
+							{#if user?.verified}
+								<div class="med-badge med-badge-info">
+									<Icon name="check-circle" class="w-3 h-3 mr-1" />
+									Verified
+								</div>
+							{/if}
+						</div>
 					</div>
 				</div>
 			</div>
 
-			<!-- Navigation -->
-			<nav class="flex-1 px-4 py-4 space-y-1">
-				{#each navItems as item}
+			<!-- Desktop Navigation -->
+			<nav class="flex-1 px-6 py-6 space-y-3">
+				{#each navItems() as item, index}
 					<button
 						type="button"
-						class="flex items-center w-full px-3 py-2 text-left rounded-lg transition-colors group {isActive(item.href) 
-							? 'bg-primary-100 text-primary-700' 
-							: 'text-gray-700 hover:bg-gray-100'}"
+						class="flex items-center justify-between w-full p-4 text-left rounded-2xl transition-all duration-300 med-nav-item group {getStaggerClass(index)} {isActive(item.href) 
+							? 'active med-gradient-glass border border-primary-200 shadow-medical' 
+							: 'hover:bg-primary-50 hover:shadow-soft hover:transform hover:scale-105'}"
 						onclick={() => navigateTo(item.href)}
 					>
-						<Icon name={item.icon} class="w-5 h-5 mr-3 {isActive(item.href) ? 'text-primary-600' : 'text-gray-500 group-hover:text-gray-700'}" />
-						{item.label}
+						<div class="flex items-center space-x-4">
+							<div class="w-12 h-12 rounded-xl {isActive(item.href) ? 'bg-primary-500 text-white shadow-medical' : 'bg-neutral-100 text-med-text-muted group-hover:bg-primary-100 group-hover:text-primary-600'} flex items-center justify-center transition-all duration-300">
+								<Icon name={item.icon} class="w-6 h-6" />
+							</div>
+							<div class="flex-1">
+								<span class="font-semibold text-base {isActive(item.href) ? 'text-primary-700' : 'text-med-text-secondary group-hover:text-primary-700'}">
+									{item.label}
+								</span>
+								{#if isActive(item.href)}
+									<p class="text-xs text-primary-500 mt-0.5">Active</p>
+								{/if}
+							</div>
+						</div>
+						{#if item.badge}
+							<div class="med-badge {item.badge === 'NEW' ? 'med-badge-success animate-pulse' : item.badge === 'TODAY' ? 'med-badge-warning' : 'med-badge-info'}">
+								{item.badge}
+							</div>
+						{/if}
 					</button>
 				{/each}
 			</nav>
 
-			<!-- Footer -->
-			<div class="flex-shrink-0 px-4 py-4 border-t border-gray-200">
-				<p class="text-xs text-gray-500 text-center">
-					© 2024 MedPlatform
-				</p>
+			<!-- Enhanced Footer with Quick Actions -->
+			<div class="flex-shrink-0 p-6 border-t border-primary-100">
+				<div class="space-y-4">
+					<!-- Quick Actions -->
+					<div class="flex justify-between items-center">
+						<button class="p-3 rounded-xl bg-primary-50 text-primary-600 hover:bg-primary-100 transition-all duration-300 transform hover:scale-105 med-focus-ring">
+							<Icon name="settings" class="w-5 h-5" />
+						</button>
+						<button class="p-3 rounded-xl bg-primary-50 text-primary-600 hover:bg-primary-100 transition-all duration-300 transform hover:scale-105 med-focus-ring">
+							<Icon name="help-circle" class="w-5 h-5" />
+						</button>
+						<button class="p-3 rounded-xl bg-primary-50 text-primary-600 hover:bg-primary-100 transition-all duration-300 transform hover:scale-105 med-focus-ring">
+							<Icon name="bell" class="w-5 h-5" />
+						</button>
+					</div>
+					
+					<!-- Copyright -->
+					<div class="text-center">
+						<p class="text-xs text-med-text-muted">
+							© 2024 MedPlatform
+						</p>
+						<p class="text-xs text-med-text-muted mt-1">
+							Built with ❤️ for healthcare
+						</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
