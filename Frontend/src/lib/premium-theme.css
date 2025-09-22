@@ -46,11 +46,44 @@
   --transition-bounce: all 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+/* Dark mode adjustments for Spotify-inspired theme */
+[data-theme="dark"] {
+  --med-emerald-50: 4 47 46;
+  --med-emerald-100: 6 78 59;
+  --med-emerald-500: 29 221 118;
+  --med-emerald-600: 22 201 109;
+  --med-emerald-700: 21 128 61;
+  
+  --med-green-50: 5 46 22;
+  --med-green-100: 20 83 45;
+  --med-green-500: 29 221 118;
+  --med-green-600: 22 201 109;
+  --med-green-700: 21 128 61;
+  
+  --med-slate-50: 30 30 30;
+  --med-slate-100: 40 40 40;
+  --med-slate-200: 60 60 60;
+  --med-slate-300: 90 90 90;
+  --med-slate-500: 179 179 179;
+  --med-slate-600: 200 200 200;
+  --med-slate-700: 220 220 220;
+  --med-slate-800: 240 240 240;
+  --med-slate-900: 255 255 255;
+  
+  /* Enhanced shadows for dark mode */
+  --shadow-premium: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-premium-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-premium-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  --shadow-emerald: 0 4px 14px 0 rgba(29, 221, 118, 0.3);
+  --shadow-green: 0 4px 14px 0 rgba(29, 221, 118, 0.3);
+}
+
 /* Premium Component Utilities */
 
 /* Modern Card Components */
 .med-card {
-  background: white;
+  /* Use theme-aware card background */
+  background: var(--card-background);
   border-radius: 1rem;
   border: 1px solid rgb(var(--med-slate-200));
   box-shadow: var(--shadow-premium);
@@ -63,7 +96,8 @@
 }
 
 .med-card-premium {
-  background: white;
+  /* Use theme-aware card background */
+  background: var(--card-background);
   border-radius: 1.5rem;
   border: 1px solid rgb(var(--med-slate-100));
   box-shadow: var(--shadow-premium-lg);
@@ -176,22 +210,32 @@
   display: block;
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 1px solid rgb(var(--med-slate-300));
+  /* Focus-dependent input styling */
+  background: var(--input-inactive-bg);
+  color: var(--input-inactive-text);
+  border: 1px solid var(--input-border);
   border-radius: 1rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
-  transition: var(--transition-premium);
-  background: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.med-input:focus {
+.med-input:focus, .med-input:active {
   outline: none;
-  border-color: rgb(var(--med-emerald-500));
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  background: var(--input-active-bg);
+  color: var(--input-active-text);
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 4px rgba(30, 215, 96, 0.2);
+  transform: translateY(-1px);
 }
 
 .med-input::placeholder {
-  color: rgb(var(--med-slate-400));
+  color: var(--input-inactive-placeholder);
+  opacity: 1;
+}
+
+.med-input:focus::placeholder, .med-input:active::placeholder {
+  color: var(--input-active-placeholder);
 }
 
 .med-input:disabled {

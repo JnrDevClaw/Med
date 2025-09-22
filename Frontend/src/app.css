@@ -1,7 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Import Premium Medical Theme */
 @import './lib/premium-theme.css';
@@ -10,10 +8,56 @@
   --primary-green: #2E7D32;
   --light-green: #A5D6A7;
   --accent-green: #00C853;
-  --background: #F5F5F5;
+  /* Light mode - 90% white background to reduce glare */
+  --background: rgba(255,255,255,0.9);
   --text-primary: #1B1B1B;
   --text-secondary: #4F4F4F;
   --error-red: #D32F2F;
+  --card-background: rgba(255,255,255,0.98);
+  --input-background: rgba(255,255,255,0.95);
+  --input-background-active: rgba(255,255,255,0.95);
+  --input-border: #d1d5db;
+  --input-placeholder: #9CA3AF;
+  --input-text: #1B1B1B;
+  --input-text-active: #1B1B1B;
+  --nav-background: white;
+  --shadow-color: rgba(0,0,0,0.06);
+  
+  /* Input focus-dependent colors */
+  --input-inactive-bg: #2A2A2A;
+  --input-inactive-text: #FFFFFF;
+  --input-inactive-placeholder: #B3B3B3;
+  --input-active-bg: #FFFFFF;
+  --input-active-text: #000000;
+  --input-active-placeholder: #666666;
+}
+
+/* Spotify-inspired dark theme */
+[data-theme="dark"] {
+  --primary-green: #1ED760;
+  --light-green: #1DB954;
+  --accent-green: #1ED760;
+  --background: #121212;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B3B3B3;
+  --error-red: #E22134;
+  --card-background: #1A1A1A;
+  --input-background: #2A2A2A;
+  --input-background-active: #FFFFFF;
+  --input-border: #404040;
+  --input-placeholder: #6A6A6A;
+  --input-text: #FFFFFF;
+  --input-text-active: #000000;
+  --nav-background: #181818;
+  --shadow-color: rgba(0,0,0,0.5);
+  
+  /* Input focus-dependent colors for dark theme */
+  --input-inactive-bg: #2A2A2A;
+  --input-inactive-text: #FFFFFF;
+  --input-inactive-placeholder: #B3B3B3;
+  --input-active-bg: #FFFFFF;
+  --input-active-text: #000000;
+  --input-active-placeholder: #666666;
 }
 
 * { box-sizing: border-box; }
@@ -26,6 +70,8 @@ body {
   background-color: var(--background);
   color: var(--text-primary);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Medical Theme - fallback plain CSS for utility classes that may rely on Tailwind */
@@ -51,23 +97,39 @@ body {
 }
 
 .card {
-  background-color: white;
+  /* Use theme-aware card background */
+  background-color: var(--card-background);
   border-radius: .75rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px var(--shadow-color);
   padding: 1.5rem;
-  transition: box-shadow .15s ease-in-out;
+  transition: box-shadow .15s ease-in-out, background-color .15s ease-in-out;
 }
-.card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+.card:hover { box-shadow: 0 6px 18px var(--shadow-color); }
 
 .input-field {
   width: 100%;
   padding: .75rem 1rem;
-  border: 1px solid #e5e7eb;
+  /* Theme-aware input styling with focus-dependent behavior */
+  background-color: var(--input-inactive-bg);
+  color: var(--input-inactive-text);
+  border: 1px solid var(--input-border);
   border-radius: .75rem;
   outline: none;
-  transition: box-shadow .12s ease-in-out, border-color .12s ease-in-out;
+  transition: all .3s ease;
 }
-.input-field:focus { box-shadow: 0 0 0 4px rgba(46,125,50,0.06); border-color: var(--accent-green); }
+.input-field::placeholder {
+  color: var(--input-inactive-placeholder);
+  opacity: 1;
+}
+.input-field:focus, .input-field:active {
+  background-color: var(--input-active-bg);
+  color: var(--input-active-text);
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 4px rgba(30, 215, 96, 0.2);
+}
+.input-field:focus::placeholder, .input-field:active::placeholder {
+  color: var(--input-active-placeholder);
+}
 
 .badge-verified {
   display: inline-flex;
@@ -86,10 +148,33 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: white;
-    border-top: 1px solid #e5e7eb;
+    background-color: var(--nav-background);
+    border-top: 1px solid var(--input-border);
     padding: .5rem 0;
+    transition: background-color .15s ease-in-out;
   }
+}
+
+/* Dark mode toggle button */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--input-background);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all .2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.theme-toggle:hover {
+  background: var(--accent-green);
+  color: white;
+  transform: scale(1.1);
 }
 
 /* Hero pattern background encoded as data URL to avoid inline parsing issues in Svelte files */

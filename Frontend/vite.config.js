@@ -1,4 +1,4 @@
-import devtoolsJson from 'vite-plugin-devtools-json';
+import devtoolsJson from "vite-plugin-devtools-json";
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
@@ -6,6 +6,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 export default defineConfig({
+	// Dev server host whitelist. Allows Cloudflare preview hosts (e.g. *.trycloudflare.com)
+	// If you need to allow every host for quick testing, set the env var VITE_DEV_ALLOWED_HOSTS=all
+	server: {
+		allowedHosts: process.env.VITE_DEV_ALLOWED_HOSTS === 'all' ? 'all' : [
+			'localhost',
+			'127.0.0.1',
+			'::1',
+			'.trycloudflare.com'
+		]
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit(),

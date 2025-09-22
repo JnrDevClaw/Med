@@ -145,13 +145,13 @@ const start = async () => {
       };
     });
 
-    // Start server
-    const port = parseInt(process.env.PORT || '3001');
+  // Start server (default 5001 to avoid common conflicts)
+  const port = parseInt(process.env.PORT || '5001');
     const host = process.env.HOST || '0.0.0.0';
 
-    await server.listen({ port, host });
-    console.log(`🚀 Server running at http://${host}:${port}`);
-    console.log(`📚 API Documentation available at http://${host}:${port}/docs`);
+  await server.listen({ port, host });
+  console.log(`🚀 Server running at http://${host}:${port}`);
+  console.log(`📚 API Documentation available at http://${host}:${port}/docs`);
     
   } catch (err) {
     server.log.error(err);

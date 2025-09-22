@@ -82,6 +82,9 @@ const authRoutes = async (fastify, opts) => {
   }, async (request, reply) => {
     const { did, profile } = request.body;
 
+    // log incoming payload for debugging signup failures
+    fastify.log.debug({ body: request.body }, 'Signup payload');
+
     try {
       // Check if user already exists
       const existingUser = await fastify.db('users')
@@ -137,7 +140,9 @@ const authRoutes = async (fastify, opts) => {
       });
 
     } catch (error) {
-      fastify.log.error('Signup error:', error);
+      // log full stack to reveal underlying DB/constraint errors
+      fastify.log.error('Signup error:', error && error.stack ? error.stack : error);
+      fastify.log.debug({ error, body: request.body }, 'Signup error details');
       return reply.code(500).send({
         error: 'INTERNAL_ERROR',
         message: 'Failed to register user',
