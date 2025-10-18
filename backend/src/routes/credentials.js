@@ -236,5 +236,7 @@ const credentialRoutes = async (fastify, opts) => {
     }
   });
 };
-
+//TO DO: Make upload to IPFS or Cloudinary or Pinata.
+//TO DO: Pass credential for ai to review and check how valid it is.
+//Reject invalid credentials
 export default credentialRoutes;
