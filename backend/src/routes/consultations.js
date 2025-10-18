@@ -189,5 +189,10 @@ const consultationRoutes = async (fastify, opts) => {
 
   // Additional consultation routes would go here...
 };
-
+/* TODO: Make an interface like stack overflow where patients can upload questions 
+that the ai chatbot/other doctors couldn't answer. Allow upvoting of questions
+Questions will be passed through a bot to determine if its a useful question and not a hate speech 
+Doctors can also upload questions (Doctors side) patients can't view this
+There will be an advice section where doctors can post advice that patients can listen to
+*/  
 export default consultationRoutes;
