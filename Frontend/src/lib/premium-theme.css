@@ -82,40 +82,42 @@
 
 /* Modern Card Components */
 .med-card {
-  /* Use theme-aware card background */
-  background: var(--card-background);
+  /* Black card background with green glowing borders */
+  background: #000000;
   border-radius: 1rem;
-  border: 1px solid rgb(var(--med-slate-200));
-  box-shadow: var(--shadow-premium);
-  transition: var(--transition-premium);
+  border: 1px solid var(--accent-green);
+  box-shadow: 0 0 8px rgba(30, 215, 96, 0.3), var(--shadow-premium);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .med-card:hover {
-  box-shadow: var(--shadow-premium-lg);
-  transform: translateY(-1px);
-}
-
-.med-card-premium {
-  /* Use theme-aware card background */
-  background: var(--card-background);
-  border-radius: 1.5rem;
-  border: 1px solid rgb(var(--med-slate-100));
-  box-shadow: var(--shadow-premium-lg);
-  backdrop-filter: blur(12px);
-  transition: var(--transition-premium);
-}
-
-.med-card-premium:hover {
-  box-shadow: var(--shadow-premium-xl);
+  box-shadow: 0 0 20px rgba(30, 215, 96, 0.6), var(--shadow-premium-lg);
+  border-color: #1ED760;
   transform: translateY(-2px);
 }
 
-.med-card-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.med-card-premium {
+  /* Black premium card with enhanced green glow */
+  background: #000000;
   border-radius: 1.5rem;
-  box-shadow: var(--shadow-premium);
+  border: 2px solid var(--accent-green);
+  box-shadow: 0 0 12px rgba(30, 215, 96, 0.4), var(--shadow-premium-lg);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.med-card-premium:hover {
+  box-shadow: 0 0 25px rgba(30, 215, 96, 0.8), var(--shadow-premium-xl);
+  border-color: #1ED760;
+  transform: translateY(-3px);
+}
+
+.med-card-glass {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--accent-green);
+  border-radius: 1.5rem;
+  box-shadow: 0 0 10px rgba(30, 215, 96, 0.35), var(--shadow-premium);
 }
 
 /* Premium Button System */
@@ -236,6 +238,23 @@
 
 .med-input:focus::placeholder, .med-input:active::placeholder {
   color: var(--input-active-placeholder);
+}
+
+/* Autofill styling for premium inputs - inactive state */
+.med-input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--input-inactive-bg) inset !important;
+  -webkit-text-fill-color: var(--input-inactive-text) !important;
+  background: var(--input-inactive-bg) !important;
+  border-color: var(--input-border) !important;
+}
+
+/* Autofill styling for premium inputs - active/focused state */
+.med-input:focus:-webkit-autofill,
+.med-input:active:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--input-active-bg) inset !important;
+  -webkit-text-fill-color: var(--input-active-text) !important;
+  background: var(--input-active-bg) !important;
+  border-color: var(--accent-green) !important;
 }
 
 .med-input:disabled {

@@ -12,7 +12,9 @@
 	// Common fields
 	let email = '';
 	let password = '';
+	let showPassword = false;
 	let confirmPassword = '';
+	let showConfirmPassword = false;
 	let firstName = '';
 	let lastName = '';
 	let phone = '';
@@ -295,29 +297,51 @@
 								<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
 									Password *
 								</label>
-								<input
+								<div class="relative">
+									<input
 									id="password"
-									type="password"
+									type={showPassword ? 'text' : 'password'}
 									required
 									bind:value={password}
 									placeholder="Min. 8 characters"
 									class="med-input"
 									disabled={isLoading}
-								/>
+									style="padding-right:2.5rem"
+									/>
+									<button
+										type="button"
+										class="input-icon-btn"
+										onclick={() => (showPassword = !showPassword)}
+										aria-label={showPassword ? 'Hide password' : 'Show password'}
+									>
+										<Icon name={showPassword ? 'eyeOff' : 'eye'} class="w-5 h-5 text-med-gray-600" />
+									</button>
+								</div>
 							</div>
 							<div>
 								<label for="confirmPassword" class="block text-sm font-medium text-med-gray-900 mb-2">
 									Confirm Password *
 								</label>
-								<input
+								<div class="relative">
+									<input
 									id="confirmPassword"
-									type="password"
+									type={showConfirmPassword ? 'text' : 'password'}
 									required
 									bind:value={confirmPassword}
 									placeholder="Repeat password"
 									class="med-input"
 									disabled={isLoading}
-								/>
+									style="padding-right:2.5rem"
+									/>
+									<button
+										type="button"
+										class="input-icon-btn"
+										onclick={() => (showConfirmPassword = !showConfirmPassword)}
+										aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+									>
+										<Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} class="w-5 h-5 text-med-gray-600" />
+									</button>
+								</div>
 							</div>
 						</div>
 					</div>

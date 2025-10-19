@@ -8,6 +8,7 @@
 	let isLoading = false;
 	let email = '';
 	let password = '';
+	let showPassword = false;
 	let error = '';
 
 	// Email/Password authentication
@@ -149,16 +150,27 @@
 						<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
 							Password
 						</label>
-							<input
-							id="password"
-							name="password"
-							type="password"
-							required
-							bind:value={password}
-							placeholder="Enter your password"
+							<div class="relative">
+								<input
+								id="password"
+								name="password"
+								type={showPassword ? 'text' : 'password'}
+								required
+								bind:value={password}
+								placeholder="Enter your password"
 								class="med-input {error ? 'border-med-error focus:ring-med-error' : ''}"
-							disabled={isLoading}
-						/>
+								disabled={isLoading}
+								style="padding-right:2.5rem"
+								/>
+								<button
+									type="button"
+									class="input-icon-btn"
+									onclick={() => (showPassword = !showPassword)}
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+								>
+									<Icon name={showPassword ? 'eyeOff' : 'eye'} class="w-5 h-5 text-med-gray-600" />
+								</button>
+							</div>
 					</div>
 
 					{#if error}
