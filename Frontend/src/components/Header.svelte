@@ -1,8 +1,9 @@
 <script>
 	import { Icon } from '$lib/icons';
 	import { authStore } from '../stores/auth';
+	import { userProfileStore, userDisplayInfo } from '../stores/userProfile';
 	import { goto } from '$app/navigation';
-	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 
 	export let onMenuClick = () => {};
 
@@ -10,11 +11,38 @@
 	let showUserMenu = false;
 
 	let user = null;
-	const unsubscribe = authStore.subscribe(state => {
+	let displayInfo = null;
+	let profileError = null;
+
+	const unsubscribeAuth = authStore.subscribe(state => {
 		user = state?.user || null;
 	});
 
-	onDestroy(() => unsubscribe());
+	const unsubscribeDisplay = userDisplayInfo.subscribe(info => {
+		displayInfo = info;
+	});
+
+	const unsubscribeProfile = userProfileStore.subscribe(state => {
+		profileError = state.error;
+	});
+
+	onMount(async () => {
+		// Load user profile data from IPFS when component mounts
+		if (user) {
+			try {
+				await userProfileStore.loadCurrentUserProfile();
+			} catch (error) {
+				console.warn('Failed to load user profile:', error);
+				// Continue with basic user data from auth store
+			}
+		}
+	});
+
+	onDestroy(() => {
+		unsubscribeAuth();
+		unsubscribeDisplay();
+		unsubscribeProfile();
+	});
 
 	function toggleUserMenu() {
 		showUserMenu = !showUserMenu;
@@ -99,18 +127,30 @@
 						<!-- Enhanced user avatar with medical status -->
 						<div class="relative">
 							<div class="w-10 h-10 med-gradient-primary rounded-2xl flex items-center justify-center shadow-medical">
-								<span class="text-sm font-semibold text-white">
-									{user?.name?.charAt(0)?.toUpperCase() || 'U'}
-								</span>
+								{#if displayInfo?.loading}
+									<div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+								{:else}
+									<span class="text-sm font-semibold text-white">
+										{displayInfo?.initials || 'U'}
+									</span>
+								{/if}
 							</div>
 							<!-- Online status indicator -->
 							<div class="absolute -bottom-1 -right-1 w-3 h-3 bg-success-500 rounded-full border-2 border-white shadow-sm"></div>
 						</div>
 						
 						<div class="hidden md:block text-left">
-							<p class="text-sm font-semibold text-med-text-primary">{user?.name || 'User'}</p>
+							<p class="text-sm font-semibold text-med-text-primary">
+								{displayInfo?.displayName || 'User'}
+								{#if profileError}
+									<span class="text-xs text-error-500 ml-1" title="Profile load error">⚠</span>
+								{/if}
+							</p>
 							<p class="text-xs text-med-text-muted capitalize med-badge med-badge-info inline-flex">
-								{user?.role || 'Doctor'}
+								{displayInfo?.role || 'Patient'}
+								{#if displayInfo?.verified}
+									<span class="ml-1">✓</span>
+								{/if}
 							</p>
 						</div>
 						
@@ -126,16 +166,35 @@
 						<div class="p-3 border-b border-primary-100 mb-1">
 							<div class="flex items-center space-x-3">
 								<div class="w-12 h-12 med-gradient-primary rounded-2xl flex items-center justify-center">
-									<span class="text-base font-semibold text-white">
-										{user?.name?.charAt(0)?.toUpperCase() || 'U'}
-									</span>
+									{#if displayInfo?.loading}
+										<div class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+									{:else}
+										<span class="text-base font-semibold text-white">
+											{displayInfo?.initials || 'U'}
+										</span>
+									{/if}
 								</div>
 								<div>
-									<p class="font-semibold text-med-text-primary">{user?.name || 'User Name'}</p>
-									<p class="text-xs text-med-text-muted">{user?.email || 'user@example.com'}</p>
-									<div class="med-badge med-badge-success text-xs mt-1">
-										{user?.role || 'Doctor'}
+									<p class="font-semibold text-med-text-primary">
+										{displayInfo?.displayName || 'User Name'}
+										{#if profileError}
+											<span class="text-xs text-error-500 ml-1" title="Profile load error">⚠</span>
+										{/if}
+									</p>
+									<p class="text-xs text-med-text-muted">{displayInfo?.email || 'user@example.com'}</p>
+									<div class="flex items-center space-x-2 mt-1">
+										<div class="med-badge med-badge-success text-xs">
+											{displayInfo?.role || 'Patient'}
+										</div>
+										{#if displayInfo?.verified}
+											<div class="med-badge med-badge-info text-xs">
+												Verified
+											</div>
+										{/if}
 									</div>
+									{#if displayInfo?.bio}
+										<p class="text-xs text-med-text-muted mt-1 truncate max-w-48">{displayInfo.bio}</p>
+									{/if}
 								</div>
 							</div>
 						</div>

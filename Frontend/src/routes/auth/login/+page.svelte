@@ -6,16 +6,14 @@
 	import Icon from '$lib/Icon.svelte';
 
 	let isLoading = false;
-	let email = '';
-	let password = '';
-	let showPassword = false;
+	let username = '';
 	let error = '';
 
-	// Email/Password authentication
+	// Username authentication
 	async function handleLogin(event) {
 		event.preventDefault();
-		if (!email.trim() || !password.trim()) {
-			error = 'Please enter both email and password';
+		if (!username.trim()) {
+			error = 'Please enter your username';
 			return;
 		}
 
@@ -23,13 +21,13 @@
 		error = '';
 
 		try {
-			const result = await authStore.loginWithEmailPassword(email, password);
+			const result = await authStore.loginWithUsername(username);
 
 			if (result.success) {
 				toastStore.success('Welcome back!', 'You have successfully signed in.');
 				goto('/dashboard');
 			} else {
-				error = result.error || 'Invalid email or password';
+				error = result.error || 'Invalid username';
 			}
 		} catch (err) {
 			error = err?.message || 'Login failed';
@@ -131,46 +129,19 @@
 				<div class="med-card-elevated">
 					<form onsubmit={handleLogin} class="space-y-6">
 					<div>
-						<label for="email" class="block text-sm font-medium text-med-gray-900 mb-2">
-							Email Address
+						<label for="username" class="block text-sm font-medium text-med-gray-900 mb-2">
+							Username
 						</label>
 							<input
-							id="email"
-							name="email"
-							type="email"
+							id="username"
+							name="username"
+							type="text"
 							required
-							bind:value={email}
-							placeholder="doctor@medconnect.com"
+							bind:value={username}
+							placeholder="Enter your username"
 								class="med-input {error ? 'border-med-error focus:ring-med-error' : ''}"
 							disabled={isLoading}
 						/>
-					</div>
-
-					<div>
-						<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
-							Password
-						</label>
-							<div class="relative">
-								<input
-								id="password"
-								name="password"
-								type={showPassword ? 'text' : 'password'}
-								required
-								bind:value={password}
-								placeholder="Enter your password"
-								class="med-input {error ? 'border-med-error focus:ring-med-error' : ''}"
-								disabled={isLoading}
-								style="padding-right:2.5rem"
-								/>
-								<button
-									type="button"
-									class="input-icon-btn"
-									onclick={() => (showPassword = !showPassword)}
-									aria-label={showPassword ? 'Hide password' : 'Show password'}
-								>
-									<Icon name={showPassword ? 'eyeOff' : 'eye'} class="w-5 h-5 text-med-gray-600" />
-								</button>
-							</div>
 					</div>
 
 					{#if error}

@@ -24,7 +24,8 @@ const videoRoutes = async (fastify, opts) => {
           properties: {
             success: { type: 'boolean' },
             roomId: { type: 'string' },
-            accessToken: { type: 'string' }
+            accessToken: { type: 'string' },
+            webrtcConfig: { type: 'object' }
           }
         }
       },
@@ -35,27 +36,32 @@ const videoRoutes = async (fastify, opts) => {
     const { consultationId } = request.body;
 
     try {
-      // Verify user has access to this consultation
-      const consultation = await fastify.db('consultations')
-        .where('id', consultationId)
-        .where(function() {
-          this.where('doctor_id', user.userId)
-            .orWhere('patient_id', user.userId);
-        })
-        .first();
+      // Verify user has access to this consultation using Firestore
+      const consultationRef = fastify.firestore.collection('consultations').doc(consultationId);
+      const consultationDoc = await consultationRef.get();
 
-      if (!consultation) {
+      if (!consultationDoc.exists) {
         return reply.code(404).send({
           error: 'CONSULTATION_NOT_FOUND',
-          message: 'Consultation not found or access denied',
+          message: 'Consultation not found',
+        });
+      }
+
+      const consultation = consultationDoc.data();
+      
+      // Check if user is either the doctor or patient
+      if (consultation.doctorUsername !== user.username && consultation.patientUsername !== user.username) {
+        return reply.code(403).send({
+          error: 'ACCESS_DENIED',
+          message: 'Access denied to this consultation',
         });
       }
 
       // Generate room ID and access token
-      const roomId = `room_${consultationId}_${Date.now()}`;
+      const roomId = `consultation_${consultationId}`;
       const accessToken = fastify.jwt.sign(
         { 
-          userId: user.userId,
+          username: user.username,
           consultationId,
           roomId,
           type: 'video_access',
@@ -64,18 +70,17 @@ const videoRoutes = async (fastify, opts) => {
       );
 
       // Update consultation with room info
-      await fastify.db('consultations')
-        .where('id', consultationId)
-        .update({
-          room_id: roomId,
-          status: 'active',
-          updated_at: new Date(),
-        });
+      await consultationRef.update({
+        roomId,
+        status: 'active',
+        updatedAt: new Date(),
+      });
 
       return reply.code(201).send({
         success: true,
         roomId,
         accessToken,
+        webrtcConfig: fastify.webrtcConfig
       });
 
     } catch (error) {
@@ -112,11 +117,11 @@ const videoRoutes = async (fastify, opts) => {
             participant: {
               type: 'object',
               properties: {
-                id: { type: 'string' },
-                name: { type: 'string' },
+                username: { type: 'string' },
                 role: { type: 'string' }
               }
-            }
+            },
+            webrtcConfig: { type: 'object' }
           }
         }
       },
@@ -127,34 +132,42 @@ const videoRoutes = async (fastify, opts) => {
     const { roomId } = request.params;
 
     try {
-      // Verify room exists and user has access
-      const consultation = await fastify.db('consultations')
-        .where('room_id', roomId)
-        .where(function() {
-          this.where('doctor_id', user.userId)
-            .orWhere('patient_id', user.userId);
-        })
-        .first();
+      // Extract consultation ID from room ID
+      const consultationId = roomId.replace('consultation_', '');
+      
+      // Verify room exists and user has access using Firestore
+      const consultationRef = fastify.firestore.collection('consultations').doc(consultationId);
+      const consultationDoc = await consultationRef.get();
 
-      if (!consultation) {
+      if (!consultationDoc.exists) {
         return reply.code(404).send({
           error: 'ROOM_NOT_FOUND',
-          message: 'Video room not found or access denied',
+          message: 'Video room not found',
         });
       }
 
-      // Get user details
-      const userData = await fastify.db('users')
-        .where('id', user.userId)
-        .first();
+      const consultation = consultationDoc.data();
+      
+      // Check if user has access
+      if (consultation.doctorUsername !== user.username && consultation.patientUsername !== user.username) {
+        return reply.code(403).send({
+          error: 'ACCESS_DENIED',
+          message: 'Access denied to this video room',
+        });
+      }
+
+      // Get user profile from Firestore
+      const userRef = fastify.firestore.collection('users').doc(user.username);
+      const userDoc = await userRef.get();
+      const userData = userDoc.exists ? userDoc.data() : { role: 'patient' };
 
       return {
         success: true,
         participant: {
-          id: user.userId,
-          name: userData.name,
+          username: user.username,
           role: userData.role,
         },
+        webrtcConfig: fastify.webrtcConfig
       };
 
     } catch (error) {
@@ -199,24 +212,41 @@ const videoRoutes = async (fastify, opts) => {
     const { roomId } = request.params;
 
     try {
-      // Update consultation status
-      const updated = await fastify.db('consultations')
-        .where('room_id', roomId)
-        .where(function() {
-          this.where('doctor_id', user.userId)
-            .orWhere('patient_id', user.userId);
-        })
-        .update({
-          status: 'completed',
-          ended_at: new Date(),
-          updated_at: new Date(),
-        });
+      // Extract consultation ID from room ID
+      const consultationId = roomId.replace('consultation_', '');
+      
+      // Verify user has access and update consultation status
+      const consultationRef = fastify.firestore.collection('consultations').doc(consultationId);
+      const consultationDoc = await consultationRef.get();
 
-      if (updated === 0) {
+      if (!consultationDoc.exists) {
         return reply.code(404).send({
           error: 'ROOM_NOT_FOUND',
-          message: 'Video room not found or access denied',
+          message: 'Video room not found',
         });
+      }
+
+      const consultation = consultationDoc.data();
+      
+      // Check if user has access
+      if (consultation.doctorUsername !== user.username && consultation.patientUsername !== user.username) {
+        return reply.code(403).send({
+          error: 'ACCESS_DENIED',
+          message: 'Access denied to this video room',
+        });
+      }
+
+      // Update consultation status
+      await consultationRef.update({
+        status: 'completed',
+        endedAt: new Date(),
+        updatedAt: new Date(),
+        endedBy: user.username
+      });
+
+      // Clean up the WebRTC room
+      if (fastify.webrtcSignaling) {
+        fastify.webrtcSignaling.cleanupRoom(roomId);
       }
 
       return {
@@ -229,6 +259,69 @@ const videoRoutes = async (fastify, opts) => {
       return reply.code(500).send({
         error: 'END_ERROR',
         message: 'Failed to end video call',
+      });
+    }
+  });
+
+  // Get connection quality metrics
+  fastify.get('/room/:roomId/quality', {
+    schema: {
+      tags: ['video'],
+      description: 'Get connection quality metrics',
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: { type: 'string' }
+        }
+      },
+      params: {
+        type: 'object',
+        properties: {
+          roomId: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            quality: { type: 'object' },
+            recommendations: { type: 'array' }
+          }
+        }
+      },
+    },
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const { roomId } = request.params;
+
+    try {
+      // Get room statistics
+      const roomStats = fastify.webrtcSignaling.getRoomStats(roomId);
+      
+      if (!roomStats) {
+        return reply.code(404).send({
+          error: 'ROOM_NOT_FOUND',
+          message: 'Video room not found or inactive',
+        });
+      }
+
+      // Return basic room quality info
+      return {
+        success: true,
+        quality: {
+          participantCount: roomStats.participantCount,
+          roomAge: Date.now() - roomStats.createdAt,
+          status: 'active'
+        },
+        recommendations: []
+      };
+
+    } catch (error) {
+      fastify.log.error('Quality check error:', error);
+      return reply.code(500).send({
+        error: 'QUALITY_CHECK_ERROR',
+        message: 'Failed to get quality metrics',
       });
     }
   });

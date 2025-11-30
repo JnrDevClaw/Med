@@ -16,6 +16,18 @@ class ApiClient {
 		this.authToken = null;
 	}
 
+	handleVerificationError(error: any): boolean {
+		if (error?.error === 'VERIFICATION_REQUIRED') {
+			// Handle verification required error
+			const redirectPath = error.details?.redirectTo;
+			if (redirectPath) {
+				window.location.href = redirectPath;
+			}
+			return true;
+		}
+		return false;
+	}
+
 	private getHeaders(): Record<string, string> {
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json'
@@ -31,6 +43,15 @@ class ApiClient {
 	private async handleResponse(response: Response) {
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({}));
+			
+			// Handle verification errors specifically
+			if (errorData.error === 'VERIFICATION_REQUIRED') {
+				const error = new Error(errorData.message || 'Verification required');
+				(error as any).error = errorData.error;
+				(error as any).details = errorData.details;
+				throw error;
+			}
+			
 			throw new Error(errorData.message || `HTTP ${response.status}`);
 		}
 
@@ -85,6 +106,16 @@ class ApiClient {
 		const response = await fetch(`${this.baseUrl}/api${endpoint}`, {
 			method: 'DELETE',
 			headers: this.getHeaders()
+		});
+
+		return this.handleResponse(response);
+	}
+
+	async patch(endpoint: string, data?: any) {
+		const response = await fetch(`${this.baseUrl}/api${endpoint}`, {
+			method: 'PATCH',
+			headers: this.getHeaders(),
+			body: data ? JSON.stringify(data) : undefined
 		});
 
 		return this.handleResponse(response);
@@ -174,6 +205,93 @@ class ApiClient {
 
 	async deleteReminder(id: string) {
 		return this.delete(`/consultations/reminders/${id}`);
+	}
+
+	// Q&A System Methods
+	async getQuestions(params?: { 
+		category?: string; 
+		sortBy?: 'upvotes' | 'oldest' | 'newest'; 
+		limit?: number; 
+		page?: number; 
+		search?: string 
+	}) {
+		return this.get('/questions', params);
+	}
+
+	async getQuestion(id: string) {
+		return this.get(`/questions/${id}`);
+	}
+
+	async createQuestion(data: { title: string; content: string; category: string; tags?: string[] }) {
+		return this.post('/questions', data);
+	}
+
+	async updateQuestion(id: string, data: { title?: string; content?: string; category?: string; tags?: string[] }) {
+		return this.put(`/questions/${id}`, data);
+	}
+
+	async deleteQuestion(id: string) {
+		return this.delete(`/questions/${id}`);
+	}
+
+	async voteQuestion(id: string, voteType: 'upvote' | 'downvote') {
+		return this.post(`/questions/${id}/vote`, { voteType });
+	}
+
+	async getUserVoteOnQuestion(id: string) {
+		return this.get(`/questions/${id}/vote`);
+	}
+
+	async getQuestionCategories() {
+		return this.get('/questions/categories/list');
+	}
+
+	async getAnswers(questionId: string, params?: { sortBy?: 'upvotes' | 'oldest' | 'newest'; limit?: number }) {
+		return this.get(`/answers/question/${questionId}`, params);
+	}
+
+	async createAnswer(data: { content: string; questionId: string }) {
+		return this.post('/answers', data);
+	}
+
+	async updateAnswer(id: string, data: { content: string }) {
+		return this.put(`/answers/${id}`, data);
+	}
+
+	async deleteAnswer(id: string) {
+		return this.delete(`/answers/${id}`);
+	}
+
+	async voteAnswer(id: string, voteType: 'upvote' | 'downvote') {
+		return this.post(`/answers/${id}/vote`, { voteType });
+	}
+
+	async acceptAnswer(id: string, isAccepted: boolean) {
+		return this.post(`/answers/${id}/accept`, { isAccepted });
+	}
+
+	async getComments(parentType: 'question' | 'answer', parentId: string, params?: { limit?: number }) {
+		return this.get(`/comments/${parentType}/${parentId}`, params);
+	}
+
+	async createComment(data: { content: string; parentId: string; parentType: 'question' | 'answer'; replyToCommentId?: string }) {
+		return this.post('/comments', data);
+	}
+
+	async updateComment(id: string, data: { content: string }) {
+		return this.put(`/comments/${id}`, data);
+	}
+
+	async deleteComment(id: string) {
+		return this.delete(`/comments/${id}`);
+	}
+
+	async getCommentReplies(id: string, params?: { limit?: number }) {
+		return this.get(`/comments/${id}/replies`, params);
+	}
+
+	async getTaggedComments(username: string, params?: { limit?: number }) {
+		return this.get(`/comments/tagged/${username}`, params);
 	}
 }
 

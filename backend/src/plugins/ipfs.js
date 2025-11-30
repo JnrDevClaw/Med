@@ -74,4 +74,6 @@ export default fp(async function (fastify, opts) {
       fastify.log.warn('Error stopping Helia on shutdown:', err);
     }
   });
+}, {
+  name: 'ipfs'
 });

@@ -1,3 +1,14 @@
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from 'firebase/firestore';
+
 const authRoutes = async (fastify, opts) => {
   
   // Generate authentication challenge
@@ -31,17 +42,16 @@ const authRoutes = async (fastify, opts) => {
   fastify.post('/signup', {
     schema: {
       tags: ['auth'],
-      description: 'Register new user with DID',
+      description: 'Register new user with username',
       body: {
         type: 'object',
-        required: ['did', 'profile'],
+        required: ['username', 'profile'],
         properties: {
-          did: { type: 'string' },
+          username: { type: 'string', minLength: 3, maxLength: 30 },
           profile: {
             type: 'object',
-            required: ['name', 'role'],
+            required: ['role'],
             properties: {
-              name: { type: 'string' },
               role: { type: 'string', enum: ['patient', 'doctor'] },
               email: { type: 'string', format: 'email' }
             }
@@ -58,11 +68,11 @@ const authRoutes = async (fastify, opts) => {
               type: 'object',
               properties: {
                 id: { type: 'string' },
-                did: { type: 'string' },
+                username: { type: 'string' },
                 profile: {
                   type: 'object',
                   properties: {
-                    name: { type: 'string' },
+                    username: { type: 'string' },
                     role: { type: 'string' }
                   }
                 }
@@ -80,60 +90,27 @@ const authRoutes = async (fastify, opts) => {
       },
     },
   }, async (request, reply) => {
-    const { did, profile } = request.body;
+    const { username, profile } = request.body;
 
     // log incoming payload for debugging signup failures
     fastify.log.debug({ body: request.body }, 'Signup payload');
 
     try {
-      // Check if user already exists
-      const existingUser = await fastify.db('users')
-        .where('did', did)
-        .first();
-
-      if (existingUser) {
-        return reply.code(400).send({
-          error: 'USER_EXISTS',
-          message: 'User with this DID already exists',
-        });
-      }
-
-      // Create user in database
-      const [newUser] = await fastify.db('users')
-        .insert({
-          did,
-          name: profile.name,
-          role: profile.role,
-          email: profile.email || null,
-          verified: false,
-          created_at: new Date(),
-          updated_at: new Date(),
-        })
-        .returning(['id', 'did', 'name', 'role']);
-
-      // Store profile on Ceramic (IDX)
-      try {
-        // This would integrate with Ceramic to store the profile
-        // For now, we'll store a reference
-        await fastify.db('ceramic_profiles')
-          .insert({
-            user_id: newUser.id,
-            did,
-            profile_stream_id: null, // Would be set after Ceramic integration
-            created_at: new Date(),
-          });
-      } catch (ceramicError) {
-        fastify.log.warn('Failed to store profile on Ceramic:', ceramicError);
-      }
+      // Use the new UserProfileService to create user
+      const newUser = await fastify.userProfile.createUserProfile(username, {
+        role: profile.role,
+        email: profile.email || null,
+        verified: false
+      });
 
       reply.code(201).send({
         success: true,
         message: 'User registered successfully',
         user: {
           id: newUser.id,
-          did: newUser.did,
+          username: newUser.username,
           profile: {
-            name: newUser.name,
+            username: newUser.username,
             role: newUser.role,
           },
         },
@@ -143,6 +120,15 @@ const authRoutes = async (fastify, opts) => {
       // log full stack to reveal underlying DB/constraint errors
       fastify.log.error('Signup error:', error && error.stack ? error.stack : error);
       fastify.log.debug({ error, body: request.body }, 'Signup error details');
+      
+      // Handle specific error types
+      if (error.message.includes('already taken') || error.message.includes('already exists')) {
+        return reply.code(400).send({
+          error: 'USER_EXISTS',
+          message: error.message,
+        });
+      }
+      
       return reply.code(500).send({
         error: 'INTERNAL_ERROR',
         message: 'Failed to register user',
@@ -154,14 +140,14 @@ const authRoutes = async (fastify, opts) => {
   fastify.post('/login', {
     schema: {
       tags: ['auth'],
-      description: 'Authenticate user with DID signature',
+      description: 'Authenticate user with username',
       body: {
         type: 'object',
-        required: ['did', 'signature', 'challenge'],
+        required: ['username'],
         properties: {
-          did: { type: 'string' },
-          signature: { type: 'string' },
-          challenge: { type: 'string' }
+          username: { type: 'string' },
+          // Note: For now, we're doing simple username-only login
+          // In production, you'd want proper password authentication
         }
       },
       response: {
@@ -175,8 +161,7 @@ const authRoutes = async (fastify, opts) => {
               type: 'object',
               properties: {
                 id: { type: 'string' },
-                did: { type: 'string' },
-                name: { type: 'string' },
+                username: { type: 'string' },
                 role: { type: 'string' },
                 verified: { type: 'boolean' }
               }
@@ -193,24 +178,12 @@ const authRoutes = async (fastify, opts) => {
       },
     },
   }, async (request, reply) => {
-    const { did, signature, challenge } = request.body;
+    const { username } = request.body;
 
     try {
-      // Verify challenge
-      try {
-        fastify.jwt.verify(challenge);
-      } catch (error) {
-        return reply.code(401).send({
-          error: 'INVALID_CHALLENGE',
-          message: 'Invalid or expired challenge',
-        });
-      }
-
-      // Find user
-      const user = await fastify.db('users')
-        .where('did', did)
-        .first();
-
+      // Find user by username
+      const user = await fastify.userProfile.firestoreService.getUserByUsername(username);
+      
       if (!user) {
         return reply.code(401).send({
           error: 'USER_NOT_FOUND',
@@ -218,16 +191,13 @@ const authRoutes = async (fastify, opts) => {
         });
       }
 
-      // TODO: Verify DID signature
-      // This would involve verifying the signature against the DID document
-      // For now, we'll assume the signature is valid
-
       // Generate tokens
       const accessToken = fastify.jwt.sign(
         { 
           userId: user.id,
-          did: user.did,
+          username: user.username,
           role: user.role,
+          verified: user.verified,
         },
         { expiresIn: '1h' }
       );
@@ -240,14 +210,13 @@ const authRoutes = async (fastify, opts) => {
         { expiresIn: '7d' }
       );
 
-      // Store refresh token
-      await fastify.db('refresh_tokens')
-        .insert({
-          user_id: user.id,
-          token: refreshToken,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          created_at: new Date(),
-        });
+      // Store refresh token in Firestore
+      await addDoc(collection(fastify.firestore, 'refresh_tokens'), {
+        userId: user.id,
+        token: refreshToken,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+      });
 
       return {
         success: true,
@@ -255,8 +224,7 @@ const authRoutes = async (fastify, opts) => {
         refreshToken,
         user: {
           id: user.id,
-          did: user.did,
-          name: user.name,
+          username: user.username,
           role: user.role,
           verified: user.verified,
         },
@@ -311,13 +279,17 @@ const authRoutes = async (fastify, opts) => {
         throw new Error('Invalid token type');
       }
 
-      // Check if token exists and is valid
-      const tokenRecord = await fastify.db('refresh_tokens')
-        .where('token', refreshToken)
-        .where('user_id', payload.userId)
-        .where('expires_at', '>', new Date())
-        .first();
-
+      // Check if token exists and is valid in Firestore
+      const tokensRef = collection(fastify.firestore, 'refresh_tokens');
+      const q = query(
+        tokensRef,
+        where('token', '==', refreshToken),
+        where('userId', '==', payload.userId),
+        where('expires_at', '>', new Date().toISOString())
+      );
+      const querySnapshot = await getDocs(q);
+      const tokenRecord = querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+      
       if (!tokenRecord) {
         return reply.code(401).send({
           error: 'INVALID_TOKEN',
@@ -326,10 +298,8 @@ const authRoutes = async (fastify, opts) => {
       }
 
       // Get user
-      const user = await fastify.db('users')
-        .where('id', payload.userId)
-        .first();
-
+      const user = await fastify.userProfile.firestoreService.getUserById(payload.userId);
+      
       if (!user) {
         return reply.code(401).send({
           error: 'USER_NOT_FOUND',
@@ -341,8 +311,9 @@ const authRoutes = async (fastify, opts) => {
       const newAccessToken = fastify.jwt.sign(
         { 
           userId: user.id,
-          did: user.did,
+          username: user.username,
           role: user.role,
+          verified: user.verified,
         },
         { expiresIn: '1h' }
       );
@@ -355,14 +326,12 @@ const authRoutes = async (fastify, opts) => {
         { expiresIn: '7d' }
       );
 
-      // Update refresh token
-      await fastify.db('refresh_tokens')
-        .where('id', tokenRecord.id)
-        .update({
-          token: newRefreshToken,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          updated_at: new Date(),
-        });
+      // Update refresh token in Firestore
+      const tokenDocRef = doc(fastify.firestore, 'refresh_tokens', tokenRecord.id);
+      await updateDoc(tokenDocRef, {
+        token: newRefreshToken,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      });
 
       return {
         accessToken: newAccessToken,
@@ -413,10 +382,13 @@ const authRoutes = async (fastify, opts) => {
 
     try {
       // Invalidate refresh token
-      await fastify.db('refresh_tokens')
-        .where('token', refreshToken)
-        .where('user_id', user.userId)
-        .delete();
+      const tokensRef = collection(fastify.firestore, 'refresh_tokens');
+      const q = query(tokensRef, where('token', '==', refreshToken), where('userId', '==', user.userId));
+      const querySnapshot = await getDocs(q);
+
+      const deletePromises = [];
+      querySnapshot.forEach(doc => deletePromises.push(deleteDoc(doc.ref)));
+      await Promise.all(deletePromises);
 
       return {
         success: true,

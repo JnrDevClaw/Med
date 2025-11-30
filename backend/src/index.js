@@ -19,11 +19,25 @@ import consultationRoutes from './routes/consultations.js';
 import videoRoutes from './routes/video.js';
 import credentialRoutes from './routes/credentials.js';
 import aiRoutes from './routes/ai.js';
+import questionsRoutes from './routes/questions.js';
+import answersRoutes from './routes/answers.js';
+import commentsRoutes from './routes/comments.js';
+import doctorDiscussionsRoutes from './routes/doctorDiscussions.js';
+import doctorCommentsRoutes from './routes/doctorComments.js';
+import notificationRoutes from './routes/notifications.js';
 
 // Import plugins
-import dbPlugin from './plugins/database.js';
 import ceramicPlugin from './plugins/ceramic.js';
 import ipfsPlugin from './plugins/ipfs.js';
+import firebasePlugin from '../firebase.js';
+import userProfilePlugin from './plugins/userProfile.js';
+import huggingFacePlugin from './plugins/huggingFace.js';
+import consultationPlugin from './plugins/consultation.js';
+import webrtcPlugin from './plugins/webrtc.js';
+import credentialPlugin from './plugins/credential.js';
+import verificationCachePlugin from './plugins/verificationCache.js';
+import integrationPlugin from './plugins/integration.js';
+import performancePlugin from './plugins/performance.js';
 
 // Import middleware
 import { authMiddleware } from './middleware/auth.js';
@@ -106,6 +120,13 @@ const start = async () => {
           { name: 'video', description: 'Video call endpoints' },
           { name: 'credentials', description: 'Doctor credential endpoints' },
           { name: 'ai', description: 'AI consultation endpoints' },
+          { name: 'questions', description: 'Q&A forum endpoints' },
+          { name: 'answers', description: 'Q&A answer endpoints' },
+          { name: 'comments', description: 'Q&A comment endpoints' },
+          { name: 'doctor-discussions', description: 'Doctor discussion forum endpoints' },
+          { name: 'doctor-comments', description: 'Doctor discussion comment endpoints' },
+          { name: 'notifications', description: 'Unified notification system endpoints' },
+          { name: 'performance', description: 'Performance monitoring and optimization endpoints' },
         ],
       },
     });
@@ -119,10 +140,17 @@ const start = async () => {
     });
 
     // Register custom plugins
-    await server.register(dbPlugin);
-    server.log.info(`Database driver mode: ${process.env.DB_CLIENT || 'pg'}`);
     await server.register(ceramicPlugin);
     await server.register(ipfsPlugin);
+    await server.register(firebasePlugin);
+    await server.register(userProfilePlugin);
+    await server.register(huggingFacePlugin);
+    await server.register(consultationPlugin);
+    await server.register(webrtcPlugin);
+    await server.register(credentialPlugin);
+    await server.register(verificationCachePlugin);
+    await server.register(performancePlugin);
+    await server.register(integrationPlugin);
 
     // Register auth middleware
     await server.register(authMiddleware);
@@ -134,6 +162,12 @@ const start = async () => {
     await server.register(videoRoutes, { prefix: '/api/video' });
     await server.register(credentialRoutes, { prefix: '/api/credentials' });
     await server.register(aiRoutes, { prefix: '/api/ai' });
+    await server.register(questionsRoutes, { prefix: '/api/questions' });
+    await server.register(answersRoutes, { prefix: '/api/answers' });
+    await server.register(commentsRoutes, { prefix: '/api/comments' });
+    await server.register(doctorDiscussionsRoutes, { prefix: '/api/doctor-discussions' });
+    await server.register(doctorCommentsRoutes, { prefix: '/api/doctor-comments' });
+    await server.register(notificationRoutes, { prefix: '/api/notifications' });
 
     // Health check endpoint
     server.get('/health', async (request, reply) => {
@@ -144,6 +178,8 @@ const start = async () => {
         version: '1.0.0'
       };
     });
+
+
 
   // Start server (default 5001 to avoid common conflicts)
   const port = parseInt(process.env.PORT || '5001');

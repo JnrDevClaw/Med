@@ -1,16 +1,12 @@
 export interface User {
 	id: string;
-	did: string;
-	name: string;
+	username: string;
 	email?: string;
 	role: 'patient' | 'doctor';
 	verified: boolean;
-	createdAt: string;
+	createdAt?: string;
+	updatedAt?: string;
 	profileData?: any;
-	ceramicProfile?: {
-		streamId?: string;
-		lastUpdated?: string;
-	};
 }
 
 export interface AuthState {
@@ -123,4 +119,182 @@ export interface ToastMessage {
 		label: string;
 		action: () => void;
 	}>;
+}
+
+// Q&A System Types
+export interface Question {
+	id: string;
+	title: string;
+	content: string;
+	category: string;
+	authorUsername: string;
+	authorRole: 'doctor' | 'patient';
+	upvotes: number;
+	downvotes: number;
+	answerCount: number;
+	tags: string[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface Answer {
+	id: string;
+	content: string;
+	questionId: string;
+	authorUsername: string;
+	authorRole: 'doctor' | 'patient';
+	upvotes: number;
+	downvotes: number;
+	isAccepted: boolean;
+	commentCount: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface Comment {
+	id: string;
+	content: string;
+	parentId: string;
+	parentType: 'question' | 'answer';
+	authorUsername: string;
+	authorRole: 'doctor' | 'patient';
+	taggedUsers: string[];
+	replyToCommentId?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface Vote {
+	voteType: 'upvote' | 'downvote' | 'removed';
+	upvotes: number;
+	downvotes: number;
+}
+
+export interface QuestionCategory {
+	name: string;
+	count: number;
+}
+
+export interface QuestionsResponse {
+	questions: Question[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		hasNext: boolean;
+	};
+}
+
+// Consultation System Types
+export interface DoctorAvailability {
+	id: string;
+	doctorUsername: string;
+	isOnline: boolean;
+	specialties: string[];
+	currentLoad: number;
+	lastSeen: string;
+	updatedAt: string;
+	matchScore?: number;
+}
+
+export interface ConsultationRequest {
+	id: string;
+	patientUsername: string;
+	assignedDoctorUsername?: string;
+	category: string;
+	description: string;
+	preferredSpecialties: string[];
+	urgency: 'low' | 'medium' | 'high' | 'emergency';
+	status: 'pending' | 'assigned' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
+	createdAt: string;
+	updatedAt: string;
+	scheduledAt?: string;
+	acceptedAt?: string;
+	completedAt?: string;
+	rejectionReason?: string;
+	notes: ConsultationNote[];
+}
+
+export interface ConsultationNote {
+	type: 'general' | 'medical' | 'administrative' | 'status_change' | 'reassignment';
+	content: string;
+	createdBy: string;
+	createdAt: string;
+}
+
+export interface HealthCategory {
+	name: string;
+	description?: string;
+	specialties?: string[];
+}
+
+export interface ConsultationStats {
+	availability: {
+		totalDoctors: number;
+		onlineDoctors: number;
+		offlineDoctors: number;
+		totalActiveConsultations: number;
+		averageLoad: number;
+	};
+	requests: {
+		pendingRequests: number;
+		assignedRequests: number;
+		completedRequests: number;
+		totalRequests: number;
+	};
+}
+// Doctor Discussion System Types
+export interface DoctorDiscussion {
+	id: string;
+	title: string;
+	content: string;
+	category: string;
+	authorUsername: string;
+	participantCount: number;
+	commentCount: number;
+	tags: string[];
+	createdAt: string;
+	updatedAt: string;
+	lastActivity: string;
+}
+
+export interface DoctorComment {
+	id: string;
+	discussionId: string;
+	content: string;
+	authorUsername: string;
+	taggedDoctors: string[];
+	parentCommentId?: string | null;
+	replyCount: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CreateDiscussionRequest {
+	title: string;
+	content: string;
+	category: string;
+	tags?: string[];
+}
+
+export interface CreateCommentRequest {
+	discussionId: string;
+	content: string;
+	parentCommentId?: string | null;
+	taggedDoctors?: string[];
+}
+
+export interface DiscussionCategory {
+	name: string;
+	count: number;
+}
+
+export interface PaginatedResponse<T> {
+	[key: string]: T[] | any;
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		hasNext: boolean;
+	};
 }

@@ -2,16 +2,29 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { authStore } from '../stores/auth';
+	import { userProfileStore, userDisplayInfo } from '../stores/userProfile';
+	import VerificationService from '../services/verificationService';
 	import Icon from '$lib/Icon.svelte';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	export let open = false;
 	export let onClose = () => {};
 
 	// subscribe to authStore to get user
 	let user = null;
+	let displayInfo = null;
+	let profileError = null;
+
 	const unsubscribeAuth = authStore.subscribe(state => {
 		user = state?.user || null;
+	});
+
+	const unsubscribeDisplay = userDisplayInfo.subscribe(info => {
+		displayInfo = info;
+	});
+
+	const unsubscribeProfile = userProfileStore.subscribe(state => {
+		profileError = state.error;
 	});
 
 	// subscribe to page store to get current path
@@ -20,15 +33,29 @@
 		currentPath = p.url.pathname;
 	});
 
+	onMount(async () => {
+		// Load user profile data from IPFS when component mounts
+		if (user) {
+			try {
+				await userProfileStore.refreshIfStale();
+			} catch (error) {
+				console.warn('Failed to refresh user profile:', error);
+			}
+		}
+	});
+
 	onDestroy(() => {
 		unsubscribeAuth();
+		unsubscribeDisplay();
+		unsubscribeProfile();
 		unsubscribePage();
 	});
 
 	const patientNavItems = [
 		{ href: '/dashboard', icon: 'home', label: 'Dashboard', badge: null },
+		{ href: '/qa', icon: 'help-circle', label: 'Q&A Forum', badge: null },
 		{ href: '/consultations', icon: 'message-square', label: 'Consultations', badge: '3' },
-		{ href: '/ai-chat', icon: 'brain', label: 'AI Assistant', badge: 'NEW' },
+		{ href: '/ai', icon: 'brain', label: 'AI Assistant', badge: 'NEW' },
 		{ href: '/video-calls', icon: 'video', label: 'Video Calls', badge: null },
 		{ href: '/doctors', icon: 'users', label: 'Find Doctors', badge: null },
 		{ href: '/reminders', icon: 'bell', label: 'Reminders', badge: '2' },
@@ -37,15 +64,25 @@
 
 	const doctorNavItems = [
 		{ href: '/dashboard', icon: 'home', label: 'Dashboard', badge: null },
+		{ href: '/qa', icon: 'help-circle', label: 'Q&A Forum', badge: null },
 		{ href: '/consultations', icon: 'message-square', label: 'Consultations', badge: '5' },
 		{ href: '/video-calls', icon: 'video', label: 'Video Calls', badge: null },
 		{ href: '/patients', icon: 'users', label: 'Patients', badge: null },
 		{ href: '/credentials', icon: 'award', label: 'Credentials', badge: null },
+		{ href: '/doctor-discussions', icon: 'users', label: 'Doctor Discussions', badge: 'VERIFIED', requiresVerification: true },
 		{ href: '/schedule', icon: 'calendar', label: 'Schedule', badge: 'TODAY' }
 	];
 
 	function navItems() {
-		return user?.role === 'doctor' ? doctorNavItems : patientNavItems;
+		const items = displayInfo?.role === 'doctor' ? doctorNavItems : patientNavItems;
+		
+		// Filter out verification-required items for unverified users
+		return items.filter(item => {
+			if (item.requiresVerification) {
+				return VerificationService.canAccessDoctorFeatures(user);
+			}
+			return true;
+		});
 	}
 
 	function navigateTo(href) {
@@ -101,25 +138,37 @@
 			<div class="flex items-center space-x-4">
 				<div class="relative">
 					<div class="w-14 h-14 med-gradient-primary rounded-2xl flex items-center justify-center shadow-medical">
-						<span class="text-lg font-semibold text-white">
-							{user?.name?.charAt(0)?.toUpperCase() || 'U'}
-						</span>
+						{#if displayInfo?.loading}
+							<div class="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full"></div>
+						{:else}
+							<span class="text-lg font-semibold text-white">
+								{displayInfo?.initials || 'U'}
+							</span>
+						{/if}
 					</div>
 					<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-success-500 rounded-full border-2 border-white shadow-sm"></div>
 				</div>
 				<div class="flex-1">
-					<p class="font-semibold text-med-text-primary">{user?.name || 'User Name'}</p>
-					<p class="text-sm text-med-text-muted">{user?.email || 'user@example.com'}</p>
+					<p class="font-semibold text-med-text-primary">
+						{displayInfo?.displayName || 'User Name'}
+						{#if profileError}
+							<span class="text-xs text-error-500 ml-1" title="Profile load error">⚠</span>
+						{/if}
+					</p>
+					<p class="text-sm text-med-text-muted">{displayInfo?.email || 'user@example.com'}</p>
 					<div class="flex items-center space-x-2 mt-2">
 						<div class="med-badge med-badge-success text-xs">
-							{user?.role === 'doctor' ? 'Doctor' : 'Patient'}
+							{displayInfo?.role === 'doctor' ? 'Doctor' : 'Patient'}
 						</div>
-						{#if user?.verified}
+						{#if displayInfo?.verified}
 							<div class="med-badge med-badge-info text-xs">
 								Verified
 							</div>
 						{/if}
 					</div>
+					{#if displayInfo?.bio}
+						<p class="text-xs text-med-text-muted mt-2 line-clamp-2">{displayInfo.bio}</p>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -173,26 +222,50 @@
 				<div class="flex items-center space-x-4">
 					<div class="relative">
 						<div class="w-16 h-16 med-gradient-primary rounded-2xl flex items-center justify-center shadow-medical">
-							<span class="text-xl font-semibold text-white">
-								{user?.name?.charAt(0)?.toUpperCase() || 'U'}
-							</span>
+							{#if displayInfo?.loading}
+								<div class="animate-spin w-7 h-7 border-2 border-white border-t-transparent rounded-full"></div>
+							{:else}
+								<span class="text-xl font-semibold text-white">
+									{displayInfo?.initials || 'U'}
+								</span>
+							{/if}
 						</div>
 						<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-success-500 rounded-full border-2 border-white shadow-sm animate-pulse"></div>
 					</div>
 					<div class="flex-1">
-						<p class="font-semibold text-med-text-primary text-base">{user?.name || 'User Name'}</p>
-						<p class="text-sm text-med-text-muted">{user?.email || 'user@example.com'}</p>
+						<p class="font-semibold text-med-text-primary text-base">
+							{displayInfo?.displayName || 'User Name'}
+							{#if profileError}
+								<span class="text-xs text-error-500 ml-1" title="Profile load error">⚠</span>
+							{/if}
+						</p>
+						<p class="text-sm text-med-text-muted">{displayInfo?.email || 'user@example.com'}</p>
 						<div class="flex items-center space-x-2 mt-3">
 							<div class="med-badge med-badge-success">
-								{user?.role === 'doctor' ? 'Doctor' : 'Patient'}
+								{displayInfo?.role === 'doctor' ? 'Doctor' : 'Patient'}
 							</div>
-							{#if user?.verified}
+							{#if displayInfo?.verified}
 								<div class="med-badge med-badge-info">
 									<Icon name="check-circle" class="w-3 h-3 mr-1" />
 									Verified
 								</div>
 							{/if}
 						</div>
+						{#if displayInfo?.bio}
+							<p class="text-sm text-med-text-muted mt-2 line-clamp-2">{displayInfo.bio}</p>
+						{/if}
+						{#if displayInfo?.specializations && displayInfo.specializations.length > 0}
+							<div class="flex flex-wrap gap-1 mt-2">
+								{#each displayInfo.specializations.slice(0, 2) as specialization}
+									<span class="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
+										{specialization}
+									</span>
+								{/each}
+								{#if displayInfo.specializations.length > 2}
+									<span class="text-xs text-med-text-muted">+{displayInfo.specializations.length - 2} more</span>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>

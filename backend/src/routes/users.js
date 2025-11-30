@@ -2,11 +2,86 @@ import { TileDocument } from '@ceramicnetwork/stream-tile';
 
 const userRoutes = async (fastify, opts) => {
   
+  // Get user profile by username
+  fastify.get('/profile/:username', {
+    schema: {
+      tags: ['users'],
+      description: 'Get user profile by username',
+      params: {
+        type: 'object',
+        properties: {
+          username: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            user: {
+              type: 'object',
+              properties: {
+                username: { type: 'string' },
+                role: { type: 'string' },
+                verified: { type: 'boolean' },
+                profileData: {}
+              }
+            }
+          }
+        }
+      },
+    },
+  }, async (request, reply) => {
+    const { username } = request.params;
+
+    try {
+      // Get user metadata
+      const userMetadata = await fastify.userProfile.getUserMetadata(username);
+      
+      // Get public profile data (filtered for privacy)
+      const fullProfile = await fastify.userProfile.getUserProfile(username);
+      
+      // Filter sensitive information for public access
+      const publicProfile = {
+        username: fullProfile.username,
+        role: fullProfile.role,
+        bio: fullProfile.bio,
+        specializations: fullProfile.specializations,
+        experience: fullProfile.experience,
+        languages: fullProfile.languages,
+        availability: fullProfile.availability
+      };
+
+      return {
+        user: {
+          username: userMetadata.username,
+          role: userMetadata.role,
+          verified: userMetadata.verified,
+          profileData: publicProfile
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error('Profile retrieval error:', error);
+      
+      if (error.message.includes('not found')) {
+        return reply.code(404).send({
+          error: 'USER_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      
+      return reply.code(500).send({
+        error: 'PROFILE_ERROR',
+        message: 'Failed to retrieve profile',
+      });
+    }
+  });
+
   // Get current user profile
   fastify.get('/profile', {
     schema: {
       tags: ['users'],
-      description: 'Get current user profile',
+      description: 'Get current user profile from IPFS',
       headers: {
         type: 'object',
         properties: {
@@ -21,20 +96,13 @@ const userRoutes = async (fastify, opts) => {
               type: 'object',
               properties: {
                 id: { type: 'string' },
-                did: { type: 'string' },
-                name: { type: 'string' },
-                email: { type: 'string' },
+                username: { type: 'string' },
                 role: { type: 'string' },
                 verified: { type: 'boolean' },
+                email: { type: 'string' },
                 createdAt: { type: 'string' },
-                profileData: {},
-                ceramicProfile: {
-                  type: 'object',
-                  properties: {
-                    streamId: { type: 'string' },
-                    lastUpdated: { type: 'string' }
-                  }
-                }
+                updatedAt: { type: 'string' },
+                profileData: {}
               }
             }
           }
@@ -46,44 +114,44 @@ const userRoutes = async (fastify, opts) => {
     const user = request.user;
 
     try {
-      // Get user data
-      const userData = await fastify.db('users')
-        .where('id', user.userId)
-        .first();
-
-      if (!userData) {
-        return reply.code(404).send({
-          error: 'USER_NOT_FOUND',
-          message: 'User not found',
-        });
-      }
-
-      // Get Ceramic profile data
-      const ceramicProfile = await fastify.db('ceramic_profiles')
-        .where('user_id', user.userId)
-        .first();
+      // Get user metadata from Firestore
+      const userMetadata = await fastify.userProfile.getUserMetadata(user.username);
+      
+      // Get complete profile from IPFS
+      const fullProfile = await fastify.userProfile.getUserProfile(user.username);
 
       return {
         user: {
-          id: userData.id,
-          did: userData.did,
-          name: userData.name,
-          email: userData.email,
-          role: userData.role,
-          verified: userData.verified,
-          createdAt: userData.created_at,
-          profileData: userData.metadata,
-          ceramicProfile: ceramicProfile ? {
-            streamId: ceramicProfile.profile_stream_id,
-            lastUpdated: ceramicProfile.updated_at,
-          } : null,
-        },
+          id: userMetadata.id,
+          username: userMetadata.username,
+          role: userMetadata.role,
+          verified: userMetadata.verified,
+          email: userMetadata.email,
+          createdAt: userMetadata.createdAt,
+          updatedAt: userMetadata.updatedAt,
+          profileData: fullProfile
+        }
       };
 
     } catch (error) {
       fastify.log.error('Profile retrieval error:', error);
+      
+      if (error.message.includes('not found')) {
+        return reply.code(404).send({
+          error: 'USER_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      
+      if (error.message.includes('network issues')) {
+        return reply.code(503).send({
+          error: 'SERVICE_UNAVAILABLE',
+          message: 'Profile temporarily unavailable due to network issues',
+        });
+      }
+      
       return reply.code(500).send({
-        error: 'DATABASE_ERROR',
+        error: 'PROFILE_ERROR',
         message: 'Failed to retrieve profile',
       });
     }
@@ -93,7 +161,7 @@ const userRoutes = async (fastify, opts) => {
   fastify.put('/profile', {
     schema: {
       tags: ['users'],
-      description: 'Update user profile',
+      description: 'Update user profile on IPFS',
       headers: {
         type: 'object',
         properties: {
@@ -103,7 +171,6 @@ const userRoutes = async (fastify, opts) => {
       body: {
         type: 'object',
         properties: {
-          name: { type: 'string', minLength: 1 },
           email: { type: 'string', format: 'email' },
           profileData: {
             type: 'object',
@@ -139,7 +206,7 @@ const userRoutes = async (fastify, opts) => {
           properties: {
             success: { type: 'boolean' },
             message: { type: 'string' },
-            ceramicStreamId: { type: 'string' }
+            newCid: { type: 'string' }
           }
         }
       },
@@ -147,73 +214,35 @@ const userRoutes = async (fastify, opts) => {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const user = request.user;
-    const { name, email, profileData } = request.body;
+    const { email, profileData } = request.body;
 
     try {
-      // Update user data in PostgreSQL
-      const updateData = {
-        updated_at: new Date(),
-      };
-
-      if (name) updateData.name = name;
-      if (email) updateData.email = email;
-      if (profileData) updateData.metadata = profileData;
-
-      await fastify.db('users')
-        .where('id', user.userId)
-        .update(updateData);
-
-      let ceramicStreamId = null;
-      if (fastify.ceramic?.client?.did) {
-        try {
-          ceramicStreamId = await updateCeramicProfile(fastify, user.did, {
-            name: name || undefined,
-            email: email || undefined,
-            ...profileData,
-          });
-
-          // Upsert Ceramic profile record
-          const existing = await fastify.db('ceramic_profiles').where('user_id', user.userId).first();
-          if (existing) {
-            await fastify.db('ceramic_profiles')
-              .where('user_id', user.userId)
-              .update({
-                profile_stream_id: ceramicStreamId,
-                profile_data: JSON.stringify({
-                  name: name || undefined,
-                  email: email || undefined,
-                  ...profileData,
-                }),
-                updated_at: new Date(),
-              });
-          } else {
-            await fastify.db('ceramic_profiles')
-              .insert({
-                user_id: user.userId,
-                did: user.did,
-                profile_stream_id: ceramicStreamId,
-                profile_data: JSON.stringify({
-                  name: name || undefined,
-                  email: email || undefined,
-                  ...profileData,
-                }),
-              });
-          }
-        } catch (ceramicError) {
-          fastify.log.warn('Failed to update Ceramic profile:', ceramicError);
-        }
-      } else {
-        fastify.log.warn('Ceramic DID not authenticated; skipping on-chain profile update');
+      // Prepare updates
+      const updates = {};
+      if (email) updates.email = email;
+      if (profileData) {
+        Object.assign(updates, profileData);
       }
+
+      // Update profile using UserProfileService
+      const newCid = await fastify.userProfile.updateUserProfile(user.username, updates);
 
       return {
         success: true,
         message: 'Profile updated successfully',
-        ceramicStreamId,
+        newCid,
       };
 
     } catch (error) {
       fastify.log.error('Profile update error:', error);
+      
+      if (error.message.includes('not found')) {
+        return reply.code(404).send({
+          error: 'USER_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      
       return reply.code(500).send({
         error: 'UPDATE_ERROR',
         message: 'Failed to update profile',
@@ -245,13 +274,12 @@ const userRoutes = async (fastify, opts) => {
                 type: 'object',
                 properties: {
                   id: { type: 'string' },
-                  name: { type: 'string' },
+                  username: { type: 'string' },
                   specializations: { type: 'array', items: { type: 'string' } },
                   experience: { type: 'number' },
                   languages: { type: 'array', items: { type: 'string' } },
                   bio: { type: 'string' },
                   verified: { type: 'boolean' },
-                  credentialCount: { type: 'number' },
                   availability: {}
                 }
               }
@@ -265,76 +293,116 @@ const userRoutes = async (fastify, opts) => {
     const { limit = 20, offset = 0, specialization, search } = request.query;
 
     try {
-      let query = fastify.db('users')
-        .leftJoin('doctor_credentials', function() {
-          this.on('users.id', 'doctor_credentials.doctor_id')
-            .andOn('doctor_credentials.status', '=', fastify.db.raw('?', ['verified']));
-        })
-        .where('users.role', 'doctor')
-        .where('users.verified', true)
-        .groupBy('users.id');
-
-      if (specialization) {
-        query = query.whereRaw("users.metadata->>'specializations' @> ?", [JSON.stringify([specialization])]);
-      }
-
-      if (search) {
-        query = query.where(function() {
-          this.where('users.name', 'ilike', `%${search}%`)
-            .orWhereRaw("users.metadata->>'bio' ilike ?", [`%${search}%`]);
+      // Get verified doctors from Firestore
+      const doctors = await fastify.userProfile.firestoreService.getUsersByRole('doctor', true);
+      
+      let filteredDoctors = doctors;
+      
+      // Apply search and specialization filters
+      if (search || specialization) {
+        const profilePromises = filteredDoctors.map(async (doctor) => {
+          try {
+            const profile = await fastify.userProfile.getUserProfile(doctor.username);
+            return { ...doctor, profile };
+          } catch (error) {
+            fastify.log.warn(`Failed to get profile for doctor ${doctor.username}:`, error);
+            return { ...doctor, profile: null };
+          }
+        });
+        
+        const doctorsWithProfiles = await Promise.all(profilePromises);
+        
+        filteredDoctors = doctorsWithProfiles.filter(doctor => {
+          if (!doctor.profile) return false;
+          
+          if (specialization && !doctor.profile.specializations?.includes(specialization)) {
+            return false;
+          }
+          
+          if (search) {
+            const searchLower = search.toLowerCase();
+            const matchesUsername = doctor.username.toLowerCase().includes(searchLower);
+            const matchesBio = doctor.profile.bio?.toLowerCase().includes(searchLower);
+            if (!matchesUsername && !matchesBio) {
+              return false;
+            }
+          }
+          
+          return true;
         });
       }
-
-      const doctors = await query
-        .select([
-          'users.id',
-          'users.name',
-          'users.metadata',
-          'users.verified',
-          fastify.db.raw('COUNT(doctor_credentials.id) as credential_count'),
-        ])
-        .orderBy('users.name')
-        .limit(limit)
-        .offset(offset);
-
-      const [{ count }] = await fastify.db('users')
-        .where('role', 'doctor')
-        .where('verified', true)
-        .count('* as count');
+      
+      // Apply pagination
+      const total = filteredDoctors.length;
+      const paginatedDoctors = filteredDoctors.slice(offset, offset + limit);
+      
+      // Get profiles for paginated results if not already loaded
+      const resultPromises = paginatedDoctors.map(async (doctor) => {
+        if (doctor.profile) {
+          return {
+            id: doctor.id,
+            username: doctor.username,
+            specializations: doctor.profile.specializations || [],
+            experience: doctor.profile.experience,
+            languages: doctor.profile.languages || [],
+            bio: doctor.profile.bio,
+            verified: doctor.verified,
+            availability: doctor.profile.availability,
+          };
+        } else {
+          try {
+            const profile = await fastify.userProfile.getUserProfile(doctor.username);
+            return {
+              id: doctor.id,
+              username: doctor.username,
+              specializations: profile.specializations || [],
+              experience: profile.experience,
+              languages: profile.languages || [],
+              bio: profile.bio,
+              verified: doctor.verified,
+              availability: profile.availability,
+            };
+          } catch (error) {
+            fastify.log.warn(`Failed to get profile for doctor ${doctor.username}:`, error);
+            return {
+              id: doctor.id,
+              username: doctor.username,
+              specializations: [],
+              experience: 0,
+              languages: [],
+              bio: '',
+              verified: doctor.verified,
+              availability: null,
+            };
+          }
+        }
+      });
+      
+      const results = await Promise.all(resultPromises);
 
       return {
-        doctors: doctors.map(doctor => ({
-          id: doctor.id,
-          name: doctor.name,
-          specializations: doctor.metadata?.specializations || [],
-          experience: doctor.metadata?.experience,
-          languages: doctor.metadata?.languages || [],
-          bio: doctor.metadata?.bio,
-          verified: doctor.verified,
-          credentialCount: parseInt(doctor.credential_count) || 0,
-          availability: doctor.metadata?.availability,
-        })),
-        total: parseInt(count),
+        doctors: results,
+        total,
       };
 
     } catch (error) {
       fastify.log.error('Doctors retrieval error:', error);
       return reply.code(500).send({
-        error: 'DATABASE_ERROR',
+        error: 'SERVICE_ERROR',
         message: 'Failed to retrieve doctors',
       });
     }
   });
 
-  // Get doctor public profile
-  fastify.get('/doctors/:doctorId', {
+  // Get doctor public profile by username
+  fastify.get('/doctors/:username', {
     schema: {
       tags: ['users'],
-      description: 'Get doctor public profile',
+      description: 'Get doctor public profile by username',
       params: {
         type: 'object',
         properties: {
-          doctorId: { type: 'string' }
+          username: { type: 'string' }
         }
       },
       response: {
@@ -345,23 +413,12 @@ const userRoutes = async (fastify, opts) => {
               type: 'object',
               properties: {
                 id: { type: 'string' },
-                name: { type: 'string' },
+                username: { type: 'string' },
                 specializations: { type: 'array', items: { type: 'string' } },
                 experience: { type: 'number' },
                 languages: { type: 'array', items: { type: 'string' } },
                 bio: { type: 'string' },
                 verified: { type: 'boolean' },
-                credentials: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      type: { type: 'string' },
-                      issuingAuthority: { type: 'string' },
-                      verifiedAt: { type: 'string' }
-                    }
-                  }
-                },
                 availability: {}
               }
             }
@@ -377,52 +434,234 @@ const userRoutes = async (fastify, opts) => {
       },
     },
   }, async (request, reply) => {
-    const { doctorId } = request.params;
+    const { username } = request.params;
 
     try {
-      // Get doctor data
-      const doctor = await fastify.db('users')
-        .where('id', doctorId)
-        .where('role', 'doctor')
-        .where('verified', true)
-        .first();
+      // Get doctor metadata
+      const doctor = await fastify.userProfile.firestoreService.getUserByUsername(username);
 
-      if (!doctor) {
+      if (!doctor || doctor.role !== 'doctor' || !doctor.verified) {
         return reply.code(404).send({
           error: 'DOCTOR_NOT_FOUND',
           message: 'Verified doctor not found',
         });
       }
 
-      // Get verified credentials
-      const credentials = await fastify.db('doctor_credentials')
-        .where('doctor_id', doctorId)
-        .where('status', 'verified')
-        .select(['credential_type', 'issuing_authority', 'verified_at']);
+      // Get doctor profile from IPFS
+      const profile = await fastify.userProfile.getUserProfile(username);
 
       return {
         doctor: {
           id: doctor.id,
-          name: doctor.name,
-          specializations: doctor.metadata?.specializations || [],
-          experience: doctor.metadata?.experience,
-          languages: doctor.metadata?.languages || [],
-          bio: doctor.metadata?.bio,
+          username: doctor.username,
+          specializations: profile.specializations || [],
+          experience: profile.experience,
+          languages: profile.languages || [],
+          bio: profile.bio,
           verified: doctor.verified,
-          credentials: credentials.map(c => ({
-            type: c.credential_type,
-            issuingAuthority: c.issuing_authority,
-            verifiedAt: c.verified_at,
-          })),
-          availability: doctor.metadata?.availability,
+          availability: profile.availability,
         },
       };
 
     } catch (error) {
       fastify.log.error('Doctor profile retrieval error:', error);
+      
+      if (error.message.includes('not found')) {
+        return reply.code(404).send({
+          error: 'DOCTOR_NOT_FOUND',
+          message: 'Verified doctor not found',
+        });
+      }
+      
       return reply.code(500).send({
-        error: 'DATABASE_ERROR',
+        error: 'SERVICE_ERROR',
         message: 'Failed to retrieve doctor profile',
+      });
+    }
+  });
+
+  // Batch retrieve user profiles
+  fastify.post('/profiles/batch', {
+    schema: {
+      tags: ['users'],
+      description: 'Retrieve multiple user profiles at once',
+      body: {
+        type: 'object',
+        required: ['usernames'],
+        properties: {
+          usernames: {
+            type: 'array',
+            items: { type: 'string' },
+            maxItems: 20 // Limit batch size
+          }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            profiles: {
+              type: 'object',
+              additionalProperties: {
+                oneOf: [
+                  {
+                    type: 'object',
+                    properties: {
+                      username: { type: 'string' },
+                      role: { type: 'string' },
+                      verified: { type: 'boolean' }
+                    }
+                  },
+                  {
+                    type: 'object',
+                    properties: {
+                      error: { type: 'string' }
+                    }
+                  }
+                ]
+              }
+            },
+            retrieved: { type: 'number' },
+            failed: { type: 'number' }
+          }
+        }
+      },
+    },
+  }, async (request, reply) => {
+    const { usernames } = request.body;
+
+    try {
+      const profiles = await fastify.userProfile.batchGetUserProfiles(usernames);
+      
+      let retrieved = 0;
+      let failed = 0;
+      
+      for (const [username, profile] of Object.entries(profiles)) {
+        if (profile.error) {
+          failed++;
+        } else {
+          retrieved++;
+          // Filter sensitive information for public access
+          profiles[username] = {
+            username: profile.username,
+            role: profile.role,
+            bio: profile.bio,
+            specializations: profile.specializations,
+            experience: profile.experience,
+            languages: profile.languages,
+            availability: profile.availability
+          };
+        }
+      }
+
+      return {
+        profiles,
+        retrieved,
+        failed
+      };
+
+    } catch (error) {
+      fastify.log.error('Batch profile retrieval error:', error);
+      return reply.code(500).send({
+        error: 'BATCH_ERROR',
+        message: 'Failed to retrieve profiles',
+      });
+    }
+  });
+
+  // Clear profile cache (admin endpoint)
+  fastify.delete('/cache/profiles', {
+    schema: {
+      tags: ['users'],
+      description: 'Clear user profile cache',
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: { type: 'string' }
+        }
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          username: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            cleared: { type: 'string' }
+          }
+        }
+      },
+    },
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const { username } = request.query;
+
+    try {
+      if (username) {
+        fastify.userProfile.clearCache(username);
+        return {
+          success: true,
+          message: 'Profile cache cleared',
+          cleared: `user: ${username}`
+        };
+      } else {
+        fastify.userProfile.clearCache();
+        return {
+          success: true,
+          message: 'All profile cache cleared',
+          cleared: 'all profiles'
+        };
+      }
+
+    } catch (error) {
+      fastify.log.error('Cache clear error:', error);
+      return reply.code(500).send({
+        error: 'CACHE_ERROR',
+        message: 'Failed to clear cache',
+      });
+    }
+  });
+
+  // Get cache statistics
+  fastify.get('/cache/profiles/stats', {
+    schema: {
+      tags: ['users'],
+      description: 'Get profile cache statistics',
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            totalEntries: { type: 'number' },
+            validEntries: { type: 'number' },
+            expiredEntries: { type: 'number' },
+            maxSize: { type: 'number' },
+            cacheTimeout: { type: 'number' }
+          }
+        }
+      },
+    },
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const stats = fastify.userProfile.getCacheStats();
+      return stats;
+
+    } catch (error) {
+      fastify.log.error('Cache stats error:', error);
+      return reply.code(500).send({
+        error: 'STATS_ERROR',
+        message: 'Failed to get cache statistics',
       });
     }
   });
@@ -442,8 +681,7 @@ const userRoutes = async (fastify, opts) => {
         type: 'object',
         required: ['confirmDeletion'],
         properties: {
-          confirmDeletion: { type: 'boolean' },
-          password: { type: 'string' }
+          confirmDeletion: { type: 'boolean' }
         }
       },
       response: {
@@ -469,13 +707,15 @@ const userRoutes = async (fastify, opts) => {
     }
 
     try {
-      // Delete user data (cascading deletes will handle related records)
-      await fastify.db('users')
-        .where('id', user.userId)
-        .delete();
+      // Clear user from cache first
+      fastify.userProfile.clearCache(user.username);
 
-      // TODO: Remove data from Ceramic network
-      // This would involve removing or marking the DID data as deleted
+      // Delete user from Firestore
+      await fastify.userProfile.firestoreService.deleteUser(user.username);
+
+      // TODO: Remove data from IPFS
+      // This would involve removing the IPFS content (though it's immutable)
+      // In practice, we'd mark the user as deleted and stop serving the content
 
       return {
         success: true,

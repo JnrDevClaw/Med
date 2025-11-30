@@ -7,12 +7,8 @@
   "scripts": {
     "dev": "nodemon --watch src --exec node -e \"require('pino')().pipe(require('pino-pretty')())\" src/index.js",
     "start": "nodemon --exec node -e \"require('pino')().pipe(require('pino-pretty')())\" src/index.js",
-    "test": "jest",
-    "lint": "eslint src --ext .js",
-    "migrate": "knex migrate:latest",
-    "migrate:rollback": "knex migrate:rollback",
-    "migrate:reset": "knex migrate:rollback --all && knex migrate:latest",
-    "seed": "knex seed:run"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "lint": "eslint src --ext .js"
   },
   "keywords": [
     "medical",
@@ -38,21 +34,23 @@
     "@fastify/swagger": "latest",
     "@fastify/swagger-ui": "latest",
     "@helia/unixfs": "latest",
+    "@huggingface/inference": "^4.13.0",
     "@ipld/dag-cbor": "latest",
     "bcrypt": "latest",
     "dids": "latest",
     "dotenv": "latest",
     "fastify": "latest",
     "fastify-plugin": "latest",
+    "firebase": "^12.5.0",
     "helia": "latest",
     "key-did-provider-ed25519": "latest",
     "key-did-resolver": "latest",
-    "knex": "latest",
     "mongodb": "latest",
     "multiformats": "latest",
-    "pg": "latest",
+    "node-cache": "^5.1.2",
     "pino": "latest",
     "pino-pretty": "^13.1.1",
+    "socket.io": "^4.8.1",
     "undici": "latest"
   },
   "devDependencies": {
@@ -61,7 +59,8 @@
     "eslint": "latest",
     "glob": "^11.0.3",
     "jest": "latest",
-    "nodemon": "latest"
+    "nodemon": "latest",
+    "socket.io-client": "^4.8.1"
   },
   "overrides": {
     "@npmcli/move-file": "npm:@npmcli/fs@latest",

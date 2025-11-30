@@ -42,23 +42,10 @@ function createAuthStore() {
 			}
 		},
 
-		async loginWithEmailPassword(email: string, password: string) {
+		async loginWithUsername(username: string) {
 			try {
-				// For traditional email/password login, we create a mock DID and challenge
-				// In a real implementation, you'd want to integrate this with your DID system
-				const mockDid = `did:web:medconnect.app:users:${email}`;
-				
-				// Get challenge first
-				const challengeResponse = await api.get('/auth/challenge');
-				const { challenge } = challengeResponse;
-				
-				// Create a mock signature (in real implementation, this would be a proper DID signature)
-				const mockSignature = `mock_signature_${email}_${Date.now()}`;
-				
 				const response = await api.post('/auth/login', {
-					did: mockDid,
-					signature: mockSignature,
-					challenge
+					username
 				});
 
 				const { accessToken, refreshToken, user } = response;
@@ -77,6 +64,15 @@ function createAuthStore() {
 					accessToken,
 					refreshToken
 				});
+
+				// Load user profile from IPFS after successful login
+				try {
+					const { userProfileStore } = await import('./userProfile');
+					await userProfileStore.loadCurrentUserProfile();
+				} catch (profileError) {
+					console.warn('Failed to load user profile after login:', profileError);
+					// Don't fail login if profile loading fails
+				}
 
 				return { success: true };
 			} catch (error: any) {
@@ -123,52 +119,10 @@ function createAuthStore() {
 			}
 		},
 
-		async register(formData: FormData) {
-			try {
-				// Convert FormData to regular object for now
-				// In a real implementation, you'd want to integrate with your DID system
-				const userData: any = {};
-				for (let [key, value] of formData.entries()) {
-					if (key === 'certificates') {
-						if (!userData.certificates) userData.certificates = [];
-						userData.certificates.push(value);
-					} else {
-						userData[key] = value;
-					}
-				}
-
-				// For now, create a mock DID based on email (this should be replaced with actual DID integration)
-				const mockDid = `did:web:medconnect.app:users:${userData.email}`;
-				
-				const response = await api.post('/auth/signup', {
-					did: mockDid,
-					profile: {
-						name: `${userData.firstName} ${userData.lastName}`,
-						role: userData.userType,
-						email: userData.email,
-						phone: userData.phone,
-						...(userData.userType === 'doctor' && {
-							medicalLicense: userData.medicalLicense,
-							specialization: userData.specialization,
-							yearsExperience: userData.yearsExperience
-						})
-					}
-				});
-
-				return { success: true, user: response.user };
-			} catch (error: any) {
-				console.error('Registration failed:', error);
-				return { 
-					success: false, 
-					error: error.message || 'Registration failed' 
-				};
-			}
-		},
-
-		async signup(did: string, profile: { name: string; role: 'patient' | 'doctor'; email?: string }) {
+		async signup(username: string, profile: { role: 'patient' | 'doctor'; email?: string; [key: string]: any }) {
 			try {
 				const response = await api.post('/auth/signup', {
-					did,
+					username,
 					profile
 				});
 
@@ -238,6 +192,14 @@ function createAuthStore() {
 
 			api.clearAuthToken();
 			set(initialState);
+
+			// Clear user profile store on logout
+			try {
+				const { userProfileStore } = await import('./userProfile');
+				userProfileStore.clearProfile();
+			} catch (error) {
+				console.warn('Failed to clear user profile on logout:', error);
+			}
 		},
 
 		updateUser(user: User) {
@@ -249,6 +211,24 @@ function createAuthStore() {
 				...state,
 				user
 			}));
+		},
+
+		async refreshUserData() {
+			const currentState = get(this);
+			if (!currentState.isAuthenticated || !currentState.user) {
+				return false;
+			}
+
+			try {
+				const response = await api.get('/users/profile');
+				const updatedUser = response.user;
+
+				this.updateUser(updatedUser);
+				return true;
+			} catch (error) {
+				console.error('Failed to refresh user data:', error);
+				return false;
+			}
 		}
 	};
 }

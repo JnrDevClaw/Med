@@ -18,8 +18,8 @@
 		"@eslint/compat": "latest",
 		"@eslint/js": "latest",
 		"@opentelemetry/api": "latest",
-		"@sveltejs/adapter-auto": "latest",
-		"@sveltejs/kit": "latest",
+		"@sveltejs/adapter-auto": "^3.0.0",
+		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "latest",
 		"@tailwindcss/forms": "latest",
 		"@tailwindcss/typography": "latest",
@@ -29,7 +29,6 @@
 		"eslint": "latest",
 		"eslint-plugin-svelte": "latest",
 		"globals": "latest",
-		"playwright": "latest",
 		"svelte": "latest",
 		"svelte-check": "latest",
 		"tailwindcss": "latest",
@@ -38,5 +37,9 @@
 		"vite-plugin-devtools-json": "latest",
 		"vitest": "latest",
 		"vitest-browser-svelte": "latest"
+	},
+	"dependencies": {
+		"socket.io-client": "^4.8.1",
+		"date-fns": "^3.6.0"
 	}
 }

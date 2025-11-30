@@ -10,14 +10,8 @@
 	let error = '';
 
 	// Common fields
+	let username = '';
 	let email = '';
-	let password = '';
-	let showPassword = false;
-	let confirmPassword = '';
-	let showConfirmPassword = false;
-	let firstName = '';
-	let lastName = '';
-	let phone = '';
 
 	// Doctor-specific reactive state
 	let medicalLicense = '';
@@ -33,12 +27,8 @@
 	}
 
 	function clearForm() {
+		username = '';
 		email = '';
-		password = '';
-		confirmPassword = '';
-		firstName = '';
-		lastName = '';
-		phone = '';
 		medicalLicense = '';
 		specialization = '';
 		yearsExperience = '';
@@ -78,27 +68,20 @@
 		error = '';
 
 		try {
-			const formData = new FormData();
-			formData.append('userType', activeTab);
-			formData.append('email', email);
-			formData.append('password', password);
-			formData.append('firstName', firstName);
-			formData.append('lastName', lastName);
-			formData.append('phone', phone);
+			const profileData = {
+				role: activeTab,
+				email: email || null,
+				...(activeTab === 'doctor' && {
+					medicalLicense,
+					specialization,
+					yearsExperience,
+					// Store certificate files as metadata for now
+					// In a full implementation, these would be uploaded to IPFS
+					certificates: certificates ? Array.from(certificates).map(f => f.name) : []
+				})
+			};
 
-			if (activeTab === 'doctor') {
-				formData.append('medicalLicense', medicalLicense);
-				formData.append('specialization', specialization);
-				formData.append('yearsExperience', yearsExperience);
-				
-				if (certificates) {
-					Array.from(certificates).forEach(file => {
-						formData.append('certificates', file);
-					});
-				}
-			}
-
-			const result = await authStore.register(formData);
+			const result = await authStore.signup(username, profileData);
 
 			if (result.success) {
 				toastStore.success(
@@ -119,18 +102,24 @@
 	}
 
 	function validateForm() {
-		if (!email || !password || !confirmPassword || !firstName || !lastName || !phone) {
-			error = 'Please fill in all required fields';
+		if (!username.trim()) {
+			error = 'Please enter a username';
 			return false;
 		}
 
-		if (password !== confirmPassword) {
-			error = 'Passwords do not match';
+		if (username.length < 3) {
+			error = 'Username must be at least 3 characters long';
 			return false;
 		}
 
-		if (password.length < 8) {
-			error = 'Password must be at least 8 characters long';
+		if (username.length > 30) {
+			error = 'Username must be less than 30 characters';
+			return false;
+		}
+
+		// Username validation - only alphanumeric and underscores
+		if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+			error = 'Username can only contain letters, numbers, and underscores';
 			return false;
 		}
 
@@ -231,118 +220,33 @@
 					<!-- Basic Information -->
 					<div>
 						<h3 class="text-lg font-medium text-med-gray-900 mb-4">Basic Information</h3>
-						<div class="grid md:grid-cols-2 gap-4">
-							<div>
-								<label for="firstName" class="block text-sm font-medium text-med-gray-900 mb-2">
-									First Name *
-								</label>
-								<input
-									id="firstName"
-									type="text"
-									required
-									bind:value={firstName}
-									placeholder="John"
-									class="med-input"
-									disabled={isLoading}
-								/>
-							</div>
-							<div>
-								<label for="lastName" class="block text-sm font-medium text-med-gray-900 mb-2">
-									Last Name *
-								</label>
-								<input
-									id="lastName"
-									type="text"
-									required
-									bind:value={lastName}
-									placeholder="Doe"
-									class="med-input"
-									disabled={isLoading}
-								/>
-							</div>
+						<div>
+							<label for="username" class="block text-sm font-medium text-med-gray-900 mb-2">
+								Username *
+							</label>
+							<input
+								id="username"
+								type="text"
+								required
+								bind:value={username}
+								placeholder="Choose a username"
+								class="med-input"
+								disabled={isLoading}
+							/>
 						</div>
 						
 						<div class="mt-4">
 							<label for="email" class="block text-sm font-medium text-med-gray-900 mb-2">
-								Email Address *
+								Email Address (Optional)
 							</label>
 							<input
 								id="email"
 								type="email"
-								required
 								bind:value={email}
 								placeholder="john@example.com"
 								class="med-input"
 								disabled={isLoading}
 							/>
-						</div>
-
-						<div class="mt-4">
-							<label for="phone" class="block text-sm font-medium text-med-gray-900 mb-2">
-								Phone Number *
-							</label>
-							<input
-								id="phone"
-								type="tel"
-								required
-								bind:value={phone}
-								placeholder="+1 (555) 123-4567"
-								class="med-input"
-								disabled={isLoading}
-							/>
-						</div>
-
-						<div class="grid md:grid-cols-2 gap-4 mt-4">
-							<div>
-								<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
-									Password *
-								</label>
-								<div class="relative">
-									<input
-									id="password"
-									type={showPassword ? 'text' : 'password'}
-									required
-									bind:value={password}
-									placeholder="Min. 8 characters"
-									class="med-input"
-									disabled={isLoading}
-									style="padding-right:2.5rem"
-									/>
-									<button
-										type="button"
-										class="input-icon-btn"
-										onclick={() => (showPassword = !showPassword)}
-										aria-label={showPassword ? 'Hide password' : 'Show password'}
-									>
-										<Icon name={showPassword ? 'eyeOff' : 'eye'} class="w-5 h-5 text-med-gray-600" />
-									</button>
-								</div>
-							</div>
-							<div>
-								<label for="confirmPassword" class="block text-sm font-medium text-med-gray-900 mb-2">
-									Confirm Password *
-								</label>
-								<div class="relative">
-									<input
-									id="confirmPassword"
-									type={showConfirmPassword ? 'text' : 'password'}
-									required
-									bind:value={confirmPassword}
-									placeholder="Repeat password"
-									class="med-input"
-									disabled={isLoading}
-									style="padding-right:2.5rem"
-									/>
-									<button
-										type="button"
-										class="input-icon-btn"
-										onclick={() => (showConfirmPassword = !showConfirmPassword)}
-										aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-									>
-										<Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} class="w-5 h-5 text-med-gray-600" />
-									</button>
-								</div>
-							</div>
 						</div>
 					</div>
 
