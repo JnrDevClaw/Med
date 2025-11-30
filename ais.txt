@@ -1,0 +1,15 @@
+alpha-ai/LLAMA3-3B-Medical-COT
+https://huggingface.co/alpha-ai/LLAMA3-3B-Medical-COT?inference_provider=featherless-ai
+
+https://huggingface.co/ruslanmv/Medical-Llama3-8B?inference_provider=featherless-ai
+ruslanmv/Medical-Llama3-8B
+
+Prefered :
+https://huggingface.co/sethuiyer/Medichat-Llama3-8B?inference_provider=featherless-ai
+sethuiyer/Medichat-Llama3-8B
+
+prompt refiner: 
+https://huggingface.co/blaze999/Medical-NER
+or
+https://huggingface.co/blaze999/Medical-NER?inference_provider=hf-inference
+blaze999/Medical-NER
