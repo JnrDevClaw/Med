@@ -22,25 +22,22 @@ const webrtcPlugin = async (fastify, opts) => {
     iceCandidatePoolSize: 10
   };
 
-  // Initialize WebRTC signaling service after server is ready
-  fastify.addHook('onReady', async () => {
-    try {
-      // Get the HTTP server instance
-      const server = fastify.server;
-      
-      // Initialize signaling service with Firestore
-      const signalingService = new WebRTCSignalingService(server, fastify.firestore);
-      
-      // Make signaling service available to routes
-      fastify.decorate('webrtcSignaling', signalingService);
-      fastify.decorate('webrtcConfig', webrtcConfig);
-      
-      fastify.log.info('WebRTC signaling service initialized');
-    } catch (error) {
-      fastify.log.error('Failed to initialize WebRTC signaling service:', error);
-      throw error;
+  // Decorate with config immediately
+  fastify.decorate('webrtcConfig', webrtcConfig);
+  
+  // Decorate with a lazy-initialized signaling service
+  let signalingService = null;
+  fastify.decorate('webrtcSignaling', {
+    get service() {
+      if (!signalingService && fastify.server) {
+        signalingService = new WebRTCSignalingService(fastify.server, fastify.firestore);
+        fastify.log.info('WebRTC signaling service initialized');
+      }
+      return signalingService;
     }
   });
+  
+  fastify.log.info('WebRTC plugin registered');
 
   // Connection quality monitoring utilities
   fastify.decorate('webrtcUtils', {

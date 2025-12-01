@@ -4,7 +4,7 @@ const aiRoutes = async (fastify, opts) => {
   // Helper function to get prompt refinement service
   function getPromptRefinementService() {
     if (!promptRefinementService) {
-      promptRefinementService = new PromptRefinementService(fastify.firebase.firestore, fastify.huggingFace);
+      promptRefinementService = new PromptRefinementService(fastify.firestore, fastify.huggingFace);
     }
     return promptRefinementService;
   }

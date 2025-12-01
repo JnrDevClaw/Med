@@ -11,7 +11,7 @@ export default fp(async function (fastify, opts) {
 
   // Initialize credential service
   const credentialService = new CredentialService(
-    fastify.firebase.firestore,
+    fastify.firestore,
     fastify.ipfs,
     fastify.log,
     process.env.HUGGINGFACE_API_KEY,
