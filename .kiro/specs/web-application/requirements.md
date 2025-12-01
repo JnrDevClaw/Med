@@ -9,7 +9,9 @@ Med Connect is a healthcare web application that connects patients with doctors 
 - **Med_Connect_System**: The complete healthcare web application platform
 - **User_Authentication_Service**: Component handling user registration, login, and role management
 - **IPFS_Storage_Layer**: Decentralized storage system for user data
-- **Firestore_Database**: Primary database for storing CIDs, mappings, and application data
+- **Database_Layer**: Flexible database layer that uses Firestore when configured, or MongoDB as local fallback
+- **Firestore_Database**: Cloud-based primary database for production (when configured)
+- **MongoDB_Database**: Local fallback database for development (when Firestore not configured)
 - **QA_Forum_System**: Stack Overflow-style question and answer platform
 - **AI_Integration_Service**: Service for integrating Hugging Face AI models
 - **Video_or Voice_Call_System**: Real-time communication system for doctor-patient consultations

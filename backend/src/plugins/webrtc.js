@@ -165,7 +165,12 @@ const webrtcPlugin = async (fastify, opts) => {
         }
       }
     },
-    preHandler: [fastify.authenticate]
+    onRequest: async (request, reply) => {
+      // Use onRequest hook instead of preHandler to ensure authenticate is available
+      if (fastify.authenticate) {
+        await fastify.authenticate(request, reply);
+      }
+    }
   }, async (request, reply) => {
     const rooms = fastify.webrtcSignaling.getActiveRooms();
     return { rooms };

@@ -29,7 +29,7 @@ import notificationRoutes from './routes/notifications.js';
 // Import plugins
 import ceramicPlugin from './plugins/ceramic.js';
 import ipfsPlugin from './plugins/ipfs.js';
-import firebasePlugin from '../firebase.js';
+import databasePlugin from './plugins/database.js';
 import userProfilePlugin from './plugins/userProfile.js';
 import huggingFacePlugin from './plugins/huggingFace.js';
 import consultationPlugin from './plugins/consultation.js';
@@ -142,7 +142,7 @@ const start = async () => {
     // Register custom plugins
     await server.register(ceramicPlugin);
     await server.register(ipfsPlugin);
-    await server.register(firebasePlugin);
+    await server.register(databasePlugin); // Auto-selects Firestore or MongoDB
     await server.register(userProfilePlugin);
     await server.register(huggingFacePlugin);
     await server.register(consultationPlugin);

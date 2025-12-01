@@ -1,62 +1,74 @@
 import fp from 'fastify-plugin';
-import knex from 'knex';
+import { MongoClient } from 'mongodb';
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
 
-export default fp(async function (fastify, opts) {
-  const dbClient = process.env.DB_CLIENT || 'pg';
+/**
+ * Database plugin that automatically selects between Firestore and MongoDB
+ * - Uses Firestore if credentials are configured
+ * - Falls back to local MongoDB if Firestore is not available
+ */
+export default fp(async (fastify, opts) => {
+  const hasFirestoreConfig = !!(
+    process.env.VITE_FIREBASE_API_KEY &&
+    process.env.VITE_FIREBASE_PROJECT_ID
+  );
 
-  if (dbClient === 'mongo') {
-    // Dynamically register Mongo plugin
-    const { default: mongoPlugin } = await import('./mongodb.js');
-    await mongoPlugin(fastify, opts);
+  if (hasFirestoreConfig) {
+    // Use Firestore
+    try {
+      const firebaseConfig = {
+        apiKey: process.env.VITE_FIREBASE_API_KEY,
+        authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.VITE_FIREBASE_APP_ID,
+      };
 
-    // Provide thin adapter so existing code can call fastify.db(collectionName)
-    fastify.decorate('db', function (collectionName) {
-      return fastify.mongo.getCollection(collectionName);
-    });
+      const firebaseApp = initializeApp(firebaseConfig);
+      const firestore = getFirestore(firebaseApp);
 
-    fastify.addHook('onClose', async (instance) => {
-      // mongo plugin handles client close
-    });
-
-    fastify.log.info('Using MongoDB client via fastify.mongo');
-    return;
+      fastify.decorate('firestore', firestore);
+      fastify.decorate('dbType', 'firestore');
+      
+      fastify.log.info('✅ Using Firestore as database');
+    } catch (error) {
+      fastify.log.warn('⚠️  Firestore configuration found but initialization failed, falling back to MongoDB');
+      fastify.log.warn('Error:', error.message);
+      await initializeMongoDB(fastify);
+    }
+  } else {
+    // Fallback to MongoDB
+    fastify.log.info('ℹ️  No Firestore configuration found, using MongoDB');
+    await initializeMongoDB(fastify);
   }
+}, {
+  name: 'firebase' // Keep name as 'firebase' for backward compatibility with existing plugins
+});
 
-  // default Postgres via Knex
-  const db = knex({
-    client: 'postgresql',
-    connection: process.env.DATABASE_URL || {
-      host: 'localhost',
-      port: 5432,
-      user: 'postgres',
-      password: 'password',
-      database: 'medplatform',
-    },
-    pool: {
-      min: 2,
-      max: 10,
-    },
-    migrations: {
-      tableName: 'knex_migrations',
-      directory: '../migrations',
-    },
-    seeds: {
-      directory: '../seeds',
-    },
-  });
+async function initializeMongoDB(fastify) {
+  const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
+  const dbName = process.env.MONGO_DB || 'medplatform';
 
-  // Test database connection
+  const client = new MongoClient(mongoUrl);
+
   try {
-    await db.raw('SELECT 1+1 as result');
-    fastify.log.info('Database connected successfully');
-  } catch (error) {
-    fastify.log.error('Database connection failed:', error);
-    throw error;
+    await client.connect();
+    fastify.log.info(`✅ Connected to MongoDB at ${mongoUrl}`);
+  } catch (err) {
+    fastify.log.error('❌ MongoDB connection failed:', err);
+    throw err;
   }
 
-  fastify.decorate('db', db);
+  const db = client.db(dbName);
+  const getCollection = (name) => db.collection(name);
+
+  fastify.decorate('mongo', { client, db, getCollection });
+  fastify.decorate('dbType', 'mongodb');
 
   fastify.addHook('onClose', async (instance) => {
-    await instance.db.destroy();
+    await client.close();
+    fastify.log.info('MongoDB connection closed');
   });
-});
+}
