@@ -128,6 +128,87 @@ class WebRTCSignalingService {
         }
       });
 
+      // Screen sharing events
+      socket.on('start-screen-share', (data) => {
+        const roomId = this.findUserRoom(socket.id);
+        if (roomId) {
+          // Update participant info to track screen sharing
+          const participants = this.rooms.get(roomId);
+          const user = participants.get(socket.id);
+          if (user) {
+            user.isScreenSharing = true;
+          }
+
+          // Notify other participants
+          socket.to(roomId).emit('peer-screen-share-started', {
+            userId: socket.id,
+            userRole: user?.userRole
+          });
+        }
+      });
+
+      socket.on('stop-screen-share', (data) => {
+        const roomId = this.findUserRoom(socket.id);
+        if (roomId) {
+          // Update participant info
+          const participants = this.rooms.get(roomId);
+          const user = participants.get(socket.id);
+          if (user) {
+            user.isScreenSharing = false;
+          }
+
+          // Notify other participants
+          socket.to(roomId).emit('peer-screen-share-stopped', {
+            userId: socket.id
+          });
+        }
+      });
+
+      // Screen share specific signaling (separate peer connection)
+      socket.on('screen-share-offer', (data) => {
+        socket.to(data.target).emit('screen-share-offer', {
+          offer: data.offer,
+          sender: socket.id
+        });
+      });
+
+      socket.on('screen-share-answer', (data) => {
+        socket.to(data.target).emit('screen-share-answer', {
+          answer: data.answer,
+          sender: socket.id
+        });
+      });
+
+      socket.on('screen-share-ice-candidate', (data) => {
+        socket.to(data.target).emit('screen-share-ice-candidate', {
+          candidate: data.candidate,
+          sender: socket.id
+        });
+      });
+
+      // Screen sharing events
+      socket.on('screen-share-started', (data) => {
+        const roomId = this.findUserRoom(socket.id);
+        if (roomId) {
+          console.log(`User ${socket.id} started screen sharing in room ${roomId}`);
+          socket.to(roomId).emit('screen-share-started', {
+            userId: socket.id,
+            timestamp: new Date()
+          });
+        }
+      });
+
+      socket.on('screen-share-stopped', (data) => {
+        const roomId = this.findUserRoom(socket.id);
+        if (roomId) {
+          console.log(`User ${socket.id} stopped screen sharing in room ${roomId}`);
+          socket.to(roomId).emit('screen-share-stopped', {
+            userId: socket.id,
+            timestamp: new Date()
+          });
+        }
+      });
+
       // End consultation
       socket.on('end-consultation', async (data) => {
         try {

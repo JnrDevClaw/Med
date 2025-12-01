@@ -1,8 +1,10 @@
 <script lang="ts">
   export let isVideoEnabled: boolean;
   export let isAudioEnabled: boolean;
+  export let isScreenSharing: boolean = false;
   export let onToggleVideo: () => void;
   export let onToggleAudio: () => void;
+  export let onToggleScreenShare: () => void;
   export let onEndCall: () => void;
 
   let showEndCallConfirm = false;
@@ -79,16 +81,20 @@
 
   <!-- Additional Controls Row -->
   <div class="flex justify-center items-center space-x-4 mt-4">
-    <!-- Screen Share (Future Enhancement) -->
+    <!-- Screen Share -->
     <button
-      disabled
-      class="px-4 py-2 bg-gray-600 text-gray-400 rounded-lg cursor-not-allowed"
-      title="Screen sharing (coming soon)"
+      on:click={onToggleScreenShare}
+      class="px-4 py-2 rounded-lg transition-colors duration-200 {
+        isScreenSharing 
+          ? 'bg-blue-600 hover:bg-blue-500 text-white' 
+          : 'bg-gray-600 hover:bg-gray-500 text-white'
+      }"
+      title={isScreenSharing ? 'Stop sharing screen' : 'Share your screen'}
     >
       <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v8a1 1 0 01-1 1h-5v2h3a1 1 0 110 2H6a1 1 0 110-2h3v-2H4a1 1 0 01-1-1V4zm1 1v6h12V5H4z" clip-rule="evenodd" />
       </svg>
-      Share Screen
+      {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
     </button>
 
     <!-- Chat (Future Enhancement) -->

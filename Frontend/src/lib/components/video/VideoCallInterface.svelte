@@ -10,18 +10,21 @@
 
   let localVideoElement: HTMLVideoElement;
   let remoteVideoElement: HTMLVideoElement;
+  let screenShareVideoElement: HTMLVideoElement;
   let localStream: MediaStream | null = null;
   let remoteStream: MediaStream | null = null;
+  let remoteScreenStream: MediaStream | null = null;
   let participants: Participant[] = [];
   let connectionQuality: ConnectionQuality | null = null;
   let isVideoEnabled = true;
   let isAudioEnabled = true;
+  let isScreenSharing = false;
   let isConnecting = true;
   let error: string | null = null;
   let callDuration = 0;
   let callStartTime: number | null = null;
 
-  let durationInterval: number;
+  let durationInterval: ReturnType<typeof setInterval>;
 
   onMount(async () => {
     try {
@@ -31,6 +34,17 @@
         if (remoteVideoElement) {
           remoteVideoElement.srcObject = stream;
         }
+      };
+
+      videoCallService.onRemoteScreenShare = (stream) => {
+        remoteScreenStream = stream;
+        if (screenShareVideoElement) {
+          screenShareVideoElement.srcObject = stream;
+        }
+      };
+
+      videoCallService.onScreenShareStopped = () => {
+        remoteScreenStream = null;
       };
 
       videoCallService.onParticipantJoined = (participant) => {
@@ -111,6 +125,25 @@
     videoCallService.toggleVideo(isVideoEnabled);
   }
 
+  async function handleToggleScreenShare() {
+    try {
+      if (isScreenSharing) {
+        await videoCallService.stopScreenShare();
+        isScreenSharing = false;
+      } else {
+        await videoCallService.startScreenShare();
+        isScreenSharing = true;
+      }
+    } catch (err) {
+      console.error('Screen share error:', err);
+      error = err instanceof Error ? err.message : 'Failed to toggle screen sharing';
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        error = null;
+      }, 3000);
+    }
+  }
+
   async function handleEndCall() {
     await videoCallService.endCall();
     handleCallEnd();
@@ -170,7 +203,35 @@
     {:else}
       <!-- Remote Video (Main) -->
       <div class="w-full h-full relative">
-        {#if remoteStream}
+        {#if remoteScreenStream}
+          <!-- Show screen share in main view -->
+          <video
+            bind:this={screenShareVideoElement}
+            autoplay
+            playsinline
+            class="w-full h-full object-contain bg-black"
+          ></video>
+          
+          <!-- Show remote camera in PIP when screen sharing -->
+          {#if remoteStream}
+            <div class="absolute top-4 left-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+              <video
+                bind:this={remoteVideoElement}
+                autoplay
+                playsinline
+                class="w-full h-full object-cover"
+              ></video>
+            </div>
+          {/if}
+
+          <!-- Screen share indicator -->
+          <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v8a1 1 0 01-1 1h-5v2h3a1 1 0 110 2H6a1 1 0 110-2h3v-2H4a1 1 0 01-1-1V4zm1 1v6h12V5H4z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm font-medium">Screen Sharing Active</span>
+          </div>
+        {:else if remoteStream}
           <video
             bind:this={remoteVideoElement}
             autoplay
@@ -202,6 +263,13 @@
               <div class="text-gray-400 text-2xl">📹</div>
             </div>
           {/if}
+          
+          <!-- Screen sharing indicator on local video -->
+          {#if isScreenSharing}
+            <div class="absolute bottom-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+              Sharing Screen
+            </div>
+          {/if}
         </div>
       </div>
     {/if}
@@ -212,8 +280,10 @@
     <VideoControls
       {isVideoEnabled}
       {isAudioEnabled}
+      {isScreenSharing}
       onToggleVideo={handleToggleVideo}
       onToggleAudio={handleToggleAudio}
+      onToggleScreenShare={handleToggleScreenShare}
       onEndCall={handleEndCall}
     />
   {/if}

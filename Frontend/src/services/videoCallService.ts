@@ -11,6 +11,7 @@ export interface Participant {
   username: string;
   role: 'doctor' | 'patient';
   socketId: string;
+  isScreenSharing?: boolean;
 }
 
 export interface ConnectionQuality {
@@ -35,15 +36,22 @@ export interface ConnectionQuality {
 export class VideoCallService {
   private socket: Socket | null = null;
   private peerConnection: RTCPeerConnection | null = null;
+  private screenSharePeerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
+  private screenShareStream: MediaStream | null = null;
+  private remoteScreenShareStream: MediaStream | null = null;
   private webrtcConfig: WebRTCConfig | null = null;
   private roomId: string | null = null;
   private isInitiator = false;
   private connectionQuality: ConnectionQuality | null = null;
+  private isScreenSharing = false;
+  private remotePeerSocketId: string | null = null;
 
   // Event callbacks
   public onRemoteStream: ((stream: MediaStream) => void) | null = null;
+  public onRemoteScreenShare: ((stream: MediaStream) => void) | null = null;
+  public onScreenShareStopped: (() => void) | null = null;
   public onParticipantJoined: ((participant: Participant) => void) | null = null;
   public onParticipantLeft: ((participant: Participant) => void) | null = null;
   public onConnectionQualityUpdate: ((quality: ConnectionQuality) => void) | null = null;
@@ -77,6 +85,7 @@ export class VideoCallService {
       // If there are existing participants, we need to initiate calls
       if (data.participants.length > 0) {
         this.isInitiator = true;
+        this.remotePeerSocketId = data.participants[0].socketId;
         this.createPeerConnection();
         this.makeOffer();
       }
@@ -84,6 +93,8 @@ export class VideoCallService {
 
     this.socket.on('user-joined', (data) => {
       console.log('User joined:', data);
+      this.remotePeerSocketId = data.socketId;
+      
       if (this.onParticipantJoined) {
         this.onParticipantJoined(data);
       }
@@ -103,6 +114,8 @@ export class VideoCallService {
 
     this.socket.on('offer', async (data) => {
       console.log('Received offer from:', data.sender);
+      this.remotePeerSocketId = data.sender;
+      
       if (!this.peerConnection) {
         this.createPeerConnection();
       }
@@ -126,6 +139,46 @@ export class VideoCallService {
       console.log('Received ICE candidate from:', data.sender);
       if (this.peerConnection) {
         await this.peerConnection.addIceCandidate(data.candidate);
+      }
+    });
+
+    // Screen sharing signaling events
+    this.socket.on('peer-screen-share-started', (data) => {
+      console.log('Peer started screen sharing:', data);
+      // Remote peer started sharing, prepare to receive
+    });
+
+    this.socket.on('peer-screen-share-stopped', (data) => {
+      console.log('Peer stopped screen sharing:', data);
+      this.handleRemoteScreenShareStopped();
+    });
+
+    this.socket.on('screen-share-offer', async (data) => {
+      console.log('Received screen share offer from:', data.sender);
+      
+      if (!this.screenSharePeerConnection) {
+        this.createScreenSharePeerConnection();
+      }
+      
+      await this.screenSharePeerConnection!.setRemoteDescription(data.offer);
+      const answer = await this.screenSharePeerConnection!.createAnswer();
+      await this.screenSharePeerConnection!.setLocalDescription(answer);
+      
+      this.socket!.emit('screen-share-answer', {
+        answer,
+        target: data.sender
+      });
+    });
+
+    this.socket.on('screen-share-answer', async (data) => {
+      console.log('Received screen share answer from:', data.sender);
+      await this.screenSharePeerConnection!.setRemoteDescription(data.answer);
+    });
+
+    this.socket.on('screen-share-ice-candidate', async (data) => {
+      console.log('Received screen share ICE candidate from:', data.sender);
+      if (this.screenSharePeerConnection) {
+        await this.screenSharePeerConnection.addIceCandidate(data.candidate);
       }
     });
 
@@ -203,7 +256,7 @@ export class VideoCallService {
       if (event.candidate && this.socket) {
         this.socket.emit('ice-candidate', {
           candidate: event.candidate,
-          target: 'broadcast' // Send to all peers in room
+          target: this.remotePeerSocketId || 'broadcast'
         });
       }
     };
@@ -217,6 +270,45 @@ export class VideoCallService {
     };
   }
 
+  private createScreenSharePeerConnection() {
+    if (!this.webrtcConfig) {
+      throw new Error('WebRTC configuration not available');
+    }
+
+    this.screenSharePeerConnection = new RTCPeerConnection(this.webrtcConfig);
+
+    // Add screen share stream tracks if we're the sender
+    if (this.screenShareStream) {
+      this.screenShareStream.getTracks().forEach(track => {
+        this.screenSharePeerConnection!.addTrack(track, this.screenShareStream!);
+      });
+    }
+
+    // Handle remote screen share stream
+    this.screenSharePeerConnection.ontrack = (event) => {
+      console.log('Received remote screen share track');
+      this.remoteScreenShareStream = event.streams[0];
+      if (this.onRemoteScreenShare) {
+        this.onRemoteScreenShare(this.remoteScreenShareStream);
+      }
+    };
+
+    // Handle ICE candidates for screen share
+    this.screenSharePeerConnection.onicecandidate = (event) => {
+      if (event.candidate && this.socket) {
+        this.socket.emit('screen-share-ice-candidate', {
+          candidate: event.candidate,
+          target: this.remotePeerSocketId || 'broadcast'
+        });
+      }
+    };
+
+    // Monitor connection state
+    this.screenSharePeerConnection.onconnectionstatechange = () => {
+      console.log('Screen share connection state:', this.screenSharePeerConnection!.connectionState);
+    };
+  }
+
   private async makeOffer() {
     if (!this.peerConnection) return;
 
@@ -225,7 +317,19 @@ export class VideoCallService {
     
     this.socket!.emit('offer', {
       offer,
-      target: 'broadcast' // Send to all peers in room
+      target: this.remotePeerSocketId || 'broadcast'
+    });
+  }
+
+  private async makeScreenShareOffer() {
+    if (!this.screenSharePeerConnection) return;
+
+    const offer = await this.screenSharePeerConnection.createOffer();
+    await this.screenSharePeerConnection.setLocalDescription(offer);
+    
+    this.socket!.emit('screen-share-offer', {
+      offer,
+      target: this.remotePeerSocketId || 'broadcast'
     });
   }
 
@@ -248,6 +352,76 @@ export class VideoCallService {
     } catch (error) {
       console.error('Error accessing media devices:', error);
       throw new Error('Failed to access camera/microphone');
+    }
+  }
+
+  async startScreenShare(): Promise<MediaStream> {
+    try {
+      // Request screen capture
+      this.screenShareStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: 'always',
+          displaySurface: 'monitor'
+        } as any,
+        audio: false // Screen audio can be enabled if needed
+      });
+
+      // Handle when user stops sharing via browser UI
+      this.screenShareStream.getVideoTracks()[0].onended = () => {
+        console.log('Screen sharing stopped by user');
+        this.stopScreenShare();
+      };
+
+      this.isScreenSharing = true;
+
+      // Create separate peer connection for screen sharing
+      this.createScreenSharePeerConnection();
+      
+      // Notify other participants
+      this.socket?.emit('start-screen-share', {});
+
+      // Make offer for screen share
+      await this.makeScreenShareOffer();
+
+      return this.screenShareStream;
+    } catch (error) {
+      console.error('Error starting screen share:', error);
+      throw new Error('Failed to start screen sharing');
+    }
+  }
+
+  stopScreenShare() {
+    if (this.screenShareStream) {
+      // Stop all tracks
+      this.screenShareStream.getTracks().forEach(track => track.stop());
+      this.screenShareStream = null;
+    }
+
+    // Close screen share peer connection
+    if (this.screenSharePeerConnection) {
+      this.screenSharePeerConnection.close();
+      this.screenSharePeerConnection = null;
+    }
+
+    this.isScreenSharing = false;
+
+    // Notify other participants
+    this.socket?.emit('stop-screen-share', {});
+  }
+
+  private handleRemoteScreenShareStopped() {
+    if (this.remoteScreenShareStream) {
+      this.remoteScreenShareStream.getTracks().forEach(track => track.stop());
+      this.remoteScreenShareStream = null;
+    }
+
+    if (this.screenSharePeerConnection) {
+      this.screenSharePeerConnection.close();
+      this.screenSharePeerConnection = null;
+    }
+
+    if (this.onScreenShareStopped) {
+      this.onScreenShareStopped();
     }
   }
 
@@ -337,6 +511,11 @@ export class VideoCallService {
   }
 
   async endCall(): Promise<void> {
+    // Stop screen sharing if active
+    if (this.isScreenSharing) {
+      this.stopScreenShare();
+    }
+
     // Stop local stream
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
@@ -347,6 +526,12 @@ export class VideoCallService {
     if (this.peerConnection) {
       this.peerConnection.close();
       this.peerConnection = null;
+    }
+
+    // Close screen share peer connection
+    if (this.screenSharePeerConnection) {
+      this.screenSharePeerConnection.close();
+      this.screenSharePeerConnection = null;
     }
 
     // Notify server and disconnect socket
@@ -361,6 +546,8 @@ export class VideoCallService {
     this.roomId = null;
     this.isInitiator = false;
     this.connectionQuality = null;
+    this.isScreenSharing = false;
+    this.remotePeerSocketId = null;
   }
 
   getConnectionQuality(): ConnectionQuality | null {
@@ -369,6 +556,18 @@ export class VideoCallService {
 
   isConnected(): boolean {
     return this.peerConnection?.connectionState === 'connected';
+  }
+
+  getIsScreenSharing(): boolean {
+    return this.isScreenSharing;
+  }
+
+  getScreenShareStream(): MediaStream | null {
+    return this.screenShareStream;
+  }
+
+  getRemoteScreenShareStream(): MediaStream | null {
+    return this.remoteScreenShareStream;
   }
 }
 
