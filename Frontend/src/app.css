@@ -5,59 +5,93 @@
 @import './lib/premium-theme.css';
 
 :root {
-  --primary-green: #2E7D32;
-  --light-green: #A5D6A7;
-  --accent-green: #00C853;
-  /* Light mode - 90% white background to reduce glare */
-  --background: rgba(255,255,255,0.9);
-  --text-primary: #1B1B1B;
-  --text-secondary: #4F4F4F;
-  --error-red: #D32F2F;
-  --card-background: rgba(255,255,255,0.98);
-  --input-background: rgba(255,255,255,0.95);
-  --input-background-active: rgba(255,255,255,0.95);
-  --input-border: #d1d5db;
-  --input-placeholder: #9CA3AF;
-  --input-text: #1B1B1B;
-  --input-text-active: #1B1B1B;
-  --nav-background: white;
-  --shadow-color: rgba(0,0,0,0.06);
+  /* Medical Professional Color Palette - High Contrast */
+  --primary-medical: #0A5F55;
+  --primary-medical-light: #14B8A6;
+  --primary-medical-dark: #064E46;
+  --accent-medical: #0891B2;
+  --accent-medical-light: #06B6D4;
+  
+  /* Light mode - Clean white with high contrast */
+  --background: #FFFFFF;
+  --background-secondary: #F8FAFB;
+  --text-primary: #000000;
+  --text-secondary: #0A5F55;
+  --text-muted: #064E46;
+  --error-red: #DC2626;
+  --success-green: #059669;
+  --warning-amber: #D97706;
+  
+  /* Card and Surface Colors */
+  --card-background: #FFFFFF;
+  --card-border: #E2E8F0;
+  --card-shadow: rgba(15, 23, 42, 0.08);
+  
+  /* Input Colors - High Contrast */
+  --input-background: #FFFFFF;
+  --input-background-active: #FFFFFF;
+  --input-border: #CBD5E1;
+  --input-border-focus: #0A5F55;
+  --input-placeholder: #0A5F55;
+  --input-text: #000000;
+  --input-text-active: #000000;
+  
+  /* Navigation */
+  --nav-background: #FFFFFF;
+  --nav-border: #E2E8F0;
+  --shadow-color: rgba(15, 23, 42, 0.08);
+  --shadow-color-lg: rgba(15, 23, 42, 0.12);
   
   /* Input focus-dependent colors */
-  --input-inactive-bg: #2A2A2A;
-  --input-inactive-text: #FFFFFF;
-  --input-inactive-placeholder: #B3B3B3;
+  --input-inactive-bg: #F8FAFC;
+  --input-inactive-text: #000000;
+  --input-inactive-placeholder: #0A5F55;
   --input-active-bg: #FFFFFF;
   --input-active-text: #000000;
-  --input-active-placeholder: #666666;
+  --input-active-placeholder: #064E46;
 }
 
-/* Spotify-inspired dark theme */
+/* Professional Medical Dark Theme - High Contrast */
 [data-theme="dark"] {
-  --primary-green: #1ED760;
-  --light-green: #1DB954;
-  --accent-green: #1ED760;
-  --background: #121212;
-  --text-primary: #FFFFFF;
-  --text-secondary: #B3B3B3;
-  --error-red: #E22134;
-  --card-background: #1A1A1A;
-  --input-background: #2A2A2A;
-  --input-background-active: #FFFFFF;
-  --input-border: #404040;
-  --input-placeholder: #6A6A6A;
-  --input-text: #FFFFFF;
-  --input-text-active: #000000;
-  --nav-background: #181818;
-  --shadow-color: rgba(0,0,0,0.5);
+  --primary-medical: #14B8A6;
+  --primary-medical-light: #2DD4BF;
+  --primary-medical-dark: #0F766E;
+  --accent-medical: #06B6D4;
+  --accent-medical-light: #22D3EE;
+  
+  --background: #0F172A;
+  --background-secondary: #1E293B;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --error-red: #EF4444;
+  --success-green: #10B981;
+  --warning-amber: #F59E0B;
+  
+  --card-background: #1E293B;
+  --card-border: #334155;
+  --card-shadow: rgba(0, 0, 0, 0.3);
+  
+  --input-background: #1E293B;
+  --input-background-active: #1E293B;
+  --input-border: #475569;
+  --input-border-focus: #14B8A6;
+  --input-placeholder: #64748B;
+  --input-text: #F8FAFC;
+  --input-text-active: #F8FAFC;
+  
+  --nav-background: #1E293B;
+  --nav-border: #334155;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --shadow-color-lg: rgba(0, 0, 0, 0.5);
   
   /* Input focus-dependent colors for dark theme */
-  --input-inactive-bg: #2A2A2A;
-  --input-inactive-text: #FFFFFF;
-  --input-inactive-placeholder: #B3B3B3;
-  --input-active-bg: #FFFFFF;
-  --input-active-text: #000000;
-  --input-active-placeholder: #666666;
+  --input-inactive-bg: #1E293B;
+  --input-inactive-text: #F8FAFC;
+  --input-inactive-placeholder: #64748B;
+  --input-active-bg: #1E293B;
+  --input-active-text: #F8FAFC;
+  --input-active-placeholder: #94A3B8;
 }
 
 * { box-sizing: border-box; }
@@ -74,53 +108,63 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Medical Theme - fallback plain CSS for utility classes that may rely on Tailwind */
+/* Professional Medical Theme - High Contrast Buttons */
 .btn-primary {
-  background-color: var(--primary-green);
+  background-color: var(--primary-medical);
   color: white;
-  font-weight: 700;
-  padding: .5rem 1.5rem;
-  border-radius: .75rem;
-  text-transform: uppercase;
-  letter-spacing: .02em;
-  transition: background-color .15s ease-in-out, box-shadow .15s ease-in-out;
+  font-weight: 600;
+  padding: .625rem 1.5rem;
+  border-radius: .5rem;
+  letter-spacing: .025em;
+  border: 2px solid var(--primary-medical);
+  transition: all .2s ease-in-out;
+  box-shadow: 0 2px 4px var(--shadow-color);
 }
-.btn-primary:hover { background-color: #246c2a; }
+.btn-primary:hover { 
+  background-color: var(--primary-medical-dark);
+  border-color: var(--primary-medical-dark);
+  box-shadow: 0 4px 8px var(--shadow-color-lg);
+  transform: translateY(-1px);
+}
 
 .btn-secondary {
-  background-color: var(--light-green);
-  color: #165f2f;
+  background-color: transparent;
+  color: var(--primary-medical);
   font-weight: 600;
-  padding: .5rem 1.5rem;
-  border-radius: .75rem;
-  transition: background-color .15s ease-in-out;
+  padding: .625rem 1.5rem;
+  border-radius: .5rem;
+  border: 2px solid var(--primary-medical);
+  transition: all .2s ease-in-out;
+}
+.btn-secondary:hover {
+  background-color: var(--primary-medical);
+  color: white;
 }
 
 .card {
-  /* Use theme-aware card background */
-  background-color: #000000;
+  background-color: var(--card-background);
   border-radius: .75rem;
-  border: 1px solid var(--accent-green);
-  box-shadow: 0 0 8px rgba(30, 215, 96, 0.3), 0 1px 3px var(--shadow-color);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 8px var(--card-shadow);
   padding: 1.5rem;
   transition: all .3s ease;
 }
 .card:hover { 
-  box-shadow: 0 0 20px rgba(30, 215, 96, 0.6), 0 6px 18px var(--shadow-color);
-  border-color: #1ED760;
+  box-shadow: 0 4px 16px var(--shadow-color-lg);
+  border-color: var(--primary-medical-light);
   transform: translateY(-2px);
 }
 
 .input-field {
   width: 100%;
   padding: .75rem 1rem;
-  /* Theme-aware input styling with focus-dependent behavior */
   background-color: var(--input-inactive-bg);
   color: var(--input-inactive-text);
-  border: 1px solid var(--input-border);
-  border-radius: .75rem;
+  border: 2px solid var(--input-border);
+  border-radius: .5rem;
   outline: none;
-  transition: all .3s ease;
+  transition: all .2s ease;
+  font-size: .9375rem;
 }
 .input-field::placeholder {
   color: var(--input-inactive-placeholder);
@@ -129,8 +173,8 @@ body {
 .input-field:focus, .input-field:active {
   background-color: var(--input-active-bg);
   color: var(--input-active-text);
-  border-color: var(--accent-green);
-  box-shadow: 0 0 0 4px rgba(30, 215, 96, 0.2);
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px rgba(10, 95, 85, 0.1);
 }
 .input-field:focus::placeholder, .input-field:active::placeholder {
   color: var(--input-active-placeholder);
@@ -150,18 +194,19 @@ body {
   -webkit-box-shadow: 0 0 0 1000px var(--input-active-bg) inset !important;
   -webkit-text-fill-color: var(--input-active-text) !important;
   background-color: var(--input-active-bg) !important;
-  border-color: var(--accent-green) !important;
+  border-color: var(--input-border-focus) !important;
 }
 
 .badge-verified {
   display: inline-flex;
   align-items: center;
-  padding: .125rem .5rem;
-  background-color: #10b981;
+  padding: .25rem .625rem;
+  background-color: var(--success-green);
   color: white;
-  font-size: .6875rem;
+  font-size: .75rem;
   font-weight: 600;
-  border-radius: .5rem;
+  border-radius: .375rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 @media (max-width: 768px) {
@@ -184,9 +229,9 @@ body {
   justify-content: center;
   width: 2.5rem;
   height: 2.5rem;
-  border: none;
-  border-radius: 50%;
-  background: var(--input-background);
+  border: 2px solid var(--card-border);
+  border-radius: .5rem;
+  background: var(--card-background);
   color: var(--text-primary);
   cursor: pointer;
   transition: all .2s ease-in-out;
@@ -194,9 +239,11 @@ body {
 }
 
 .theme-toggle:hover {
-  background: var(--accent-green);
+  background: var(--primary-medical);
   color: white;
-  transform: scale(1.1);
+  border-color: var(--primary-medical);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px var(--shadow-color-lg);
 }
 
 /* Inline input icon button (eye toggle) */

@@ -4,19 +4,19 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				// Premium Medical Teal/Emerald Theme - Based on #14B8A6
+				// Professional Medical Color Palette - High Contrast
 				'med-teal': {
-					50: '#f0fdfa',
-					100: '#ccfbf1',
-					200: '#99f6e4',
-					300: '#5eead4',
-					400: '#2dd4bf',
-					500: '#14b8a6', // Primary teal - user specified color
-					600: '#0d9488',
-					700: '#0f766e',
-					800: '#115e59',
-					900: '#134e4a',
-					950: '#042f2e',
+					50: '#F0FDFA',
+					100: '#CCFBF1',
+					200: '#99F6E4',
+					300: '#5EEAD4',
+					400: '#2DD4BF',
+					500: '#14B8A6',
+					600: '#0D9488',
+					700: '#0A5F55', // Primary medical color
+					800: '#064E46',
+					900: '#134E4A',
+					950: '#042F2E',
 				},
 				'med-emerald': {
 					50: '#ecfdf5',
@@ -110,19 +110,19 @@ export default {
 					900: '#7f1d1d',
 					950: '#450a0a',
 				},
-				// Component Aliases - Teal Primary System
+				// Component Aliases - Professional Medical Primary System
 				primary: {
-					50: '#f0fdfa',
-					100: '#ccfbf1',
-					200: '#99f6e4',
-					300: '#5eead4',
-					400: '#2dd4bf',
-					500: '#14b8a6', // Main brand color
-					600: '#0d9488',
-					700: '#0f766e',
-					800: '#115e59',
-					900: '#134e4a',
-					950: '#042f2e',
+					50: '#F0FDFA',
+					100: '#CCFBF1',
+					200: '#99F6E4',
+					300: '#5EEAD4',
+					400: '#2DD4BF',
+					500: '#14B8A6',
+					600: '#0D9488',
+					700: '#0A5F55', // Main brand color - high contrast
+					800: '#064E46',
+					900: '#134E4A',
+					950: '#042F2E',
 				},
 				secondary: {
 					50: '#ecfdf5',

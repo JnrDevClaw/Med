@@ -184,7 +184,7 @@
 					<span class="text-xl font-bold text-med-gray-900">MedConnect</span>
 				</button>
 				<button 
-					class="text-med-gray-600 hover:text-med-green-700 font-medium"
+					class="text-black hover:text-med-green-700 font-medium"
 					onclick={goToLogin}
 				>
 					Already have an account? Login
@@ -196,10 +196,10 @@
 	<div class="flex flex-col justify-center px-6 py-12 lg:px-8">
 		<div class="sm:mx-auto sm:w-full sm:max-w-2xl">
 			<div class="text-center mb-8">
-				<h2 class="text-3xl font-bold text-med-gray-900">
+				<h2 class="text-3xl font-bold text-black">
 					Create your MedConnect account
 				</h2>
-				<p class="mt-2 text-med-gray-600">
+				<p class="mt-2 text-black">
 					Join our secure healthcare platform and connect with medical professionals
 				</p>
 			</div>
@@ -210,7 +210,7 @@
 					<button
 						class="flex-1 py-2 px-4 text-sm font-medium rounded-lg transition duration-200 {activeTab === 'patient' 
 							? 'bg-med-green-700 text-white' 
-							: 'text-med-gray-600 hover:text-med-green-700'}"
+							: 'text-black hover:text-med-green-700 hover:bg-gray-100'}"
 						onclick={() => switchTab('patient')}
 					>
 						<div class="flex items-center justify-center space-x-2">
@@ -221,7 +221,7 @@
 					<button
 						class="flex-1 py-2 px-4 text-sm font-medium rounded-lg transition duration-200 {activeTab === 'doctor' 
 							? 'bg-med-green-700 text-white' 
-							: 'text-med-gray-600 hover:text-med-green-700'}"
+							: 'text-black hover:text-med-green-700 hover:bg-gray-100'}"
 						onclick={() => switchTab('doctor')}
 					>
 						<div class="flex items-center justify-center space-x-2">
@@ -236,9 +236,9 @@
 				<form onsubmit={handleSignup} class="space-y-6">
 					<!-- Basic Information -->
 					<div>
-						<h3 class="text-lg font-medium text-med-gray-900 mb-4">Basic Information</h3>
+						<h3 class="text-lg font-medium text-black mb-4">Basic Information</h3>
 						<div>
-							<label for="username" class="block text-sm font-medium text-med-gray-900 mb-2">
+							<label for="username" class="block text-sm font-medium text-black mb-2">
 								Username *
 							</label>
 							<input
@@ -253,7 +253,7 @@
 						</div>
 						
 						<div class="mt-4">
-							<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
+							<label for="password" class="block text-sm font-medium text-black mb-2">
 								Password *
 							</label>
 							<input
@@ -265,11 +265,11 @@
 								class="med-input"
 								disabled={isLoading}
 							/>
-							<p class="mt-1 text-xs text-med-gray-500">Must be at least 8 characters long</p>
+							<p class="mt-1 text-xs text-med-green-700">Must be at least 8 characters long</p>
 						</div>
 
 						<div class="mt-4">
-							<label for="confirmPassword" class="block text-sm font-medium text-med-gray-900 mb-2">
+							<label for="confirmPassword" class="block text-sm font-medium text-black mb-2">
 								Confirm Password *
 							</label>
 							<input
@@ -284,7 +284,7 @@
 						</div>
 						
 						<div class="mt-4">
-							<label for="email" class="block text-sm font-medium text-med-gray-900 mb-2">
+							<label for="email" class="block text-sm font-medium text-black mb-2">
 								Email Address (Optional)
 							</label>
 							<input
@@ -301,7 +301,7 @@
 					<!-- Doctor-specific fields -->
 					{#if activeTab === 'doctor'}
 						<div class="pt-6 border-t border-gray-200">
-							<h3 class="text-lg font-medium text-med-gray-900 mb-4">
+							<h3 class="text-lg font-medium text-black mb-4">
 								Medical Credentials
 								<span class="badge-verified ml-2">
 									<svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -313,7 +313,7 @@
 
 							<div class="space-y-4">
 								<div>
-									<label for="medicalLicense" class="block text-sm font-medium text-med-gray-900 mb-2">
+									<label for="medicalLicense" class="block text-sm font-medium text-black mb-2">
 										Medical License Number *
 									</label>
 									<input
@@ -329,7 +329,7 @@
 
 								<div class="grid md:grid-cols-2 gap-4">
 									<div>
-										<label for="specialization" class="block text-sm font-medium text-med-gray-900 mb-2">
+										<label for="specialization" class="block text-sm font-medium text-black mb-2">
 											Specialization *
 										</label>
 										<select
@@ -358,7 +358,7 @@
 									</div>
 
 									<div>
-										<label for="yearsExperience" class="block text-sm font-medium text-med-gray-900 mb-2">
+										<label for="yearsExperience" class="block text-sm font-medium text-black mb-2">
 											Years of Experience *
 										</label>
 										<select
@@ -380,7 +380,7 @@
 								</div>
 
 								<div>
-									<label for="certificates" class="block text-sm font-medium text-med-gray-900 mb-2">
+									<label for="certificates" class="block text-sm font-medium text-black mb-2">
 										Upload Medical Certificates (Optional)
 									</label>
 									<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-med-green-500 transition duration-200">
@@ -460,7 +460,7 @@
 				</form>
 
 				<div class="mt-6 text-center">
-					<p class="text-sm text-med-gray-600">
+					<p class="text-sm text-black">
 						Already have an account?
 						<button
 							type="button"
@@ -475,11 +475,11 @@
 
 			<!-- Terms notice -->
 			<div class="mt-8 text-center">
-				<p class="text-xs text-med-gray-500">
+				<p class="text-xs text-black">
 					By creating an account, you agree to our 
+					<a href="/terms" class="text-med-green-700 hover:text-med-green-600">Terms of Service</a>
 					and 
-					  <a href="/terms" class="text-med-green-700 hover:text-med-green-600">Terms of Service</a>
-		  <a href="/privacy" class="text-med-green-700 hover:text-med-green-600">Privacy Policy</a>
+					<a href="/privacy" class="text-med-green-700 hover:text-med-green-600">Privacy Policy</a>
 				</p>
 			</div>
 		</div>
