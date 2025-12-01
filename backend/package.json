@@ -6,9 +6,11 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon --watch src --exec node -e \"require('pino')().pipe(require('pino-pretty')())\" src/index.js",
-    "start": "nodemon --exec node -e \"require('pino')().pipe(require('pino-pretty')())\" src/index.js",
+    "start": "node src/index.js",
+    "start:dev": "nodemon --exec node -e \"require('pino')().pipe(require('pino-pretty')())\" src/index.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "lint": "eslint src --ext .js"
+    "lint": "eslint src --ext .js",
+    "check-env": "node ../check-env.js"
   },
   "keywords": [
     "medical",

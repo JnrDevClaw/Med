@@ -53,6 +53,8 @@ const server = fastify({
   logger: {
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   },
+  pluginTimeout: 30000, // 30 seconds for plugin initialization
+  requestTimeout: 60000, // 60 seconds for request timeout
 });
 
 const start = async () => {
@@ -76,9 +78,27 @@ const start = async () => {
       },
     });
 
+    // Configure CORS for production and development
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://medconnect124.netlify.app',
+      process.env.CORS_ORIGIN
+    ].filter(Boolean);
+
     await server.register(cors, {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+      origin: (origin, cb) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return cb(null, true);
+        
+        if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+          cb(null, true);
+        } else {
+          cb(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
     });
 
     await server.register(rateLimit, {
@@ -181,13 +201,13 @@ const start = async () => {
 
 
 
-  // Start server (default 5001 to avoid common conflicts)
-  const port = parseInt(process.env.PORT || '5001');
+    // Start server - use PORT from environment (Render sets this to 3001)
+    const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || '0.0.0.0';
 
-  await server.listen({ port, host });
-  console.log(`🚀 Server running at http://${host}:${port}`);
-  console.log(`📚 API Documentation available at http://${host}:${port}/docs`);
+    await server.listen({ port, host });
+    console.log(`🚀 Server running at http://${host}:${port}`);
+    console.log(`📚 API Documentation available at http://${host}:${port}/docs`);
     
   } catch (err) {
     server.log.error(err);
