@@ -7,13 +7,18 @@
 
 	let isLoading = false;
 	let username = '';
+	let password = '';
 	let error = '';
 
-	// Username authentication
+	// Password authentication
 	async function handleLogin(event) {
 		event.preventDefault();
 		if (!username.trim()) {
 			error = 'Please enter your username';
+			return;
+		}
+		if (!password.trim()) {
+			error = 'Please enter your password';
 			return;
 		}
 
@@ -21,13 +26,13 @@
 		error = '';
 
 		try {
-			const result = await authStore.loginWithUsername(username);
+			const result = await authStore.login(username, password);
 
 			if (result.success) {
 				toastStore.success('Welcome back!', 'You have successfully signed in.');
 				goto('/dashboard');
 			} else {
-				error = result.error || 'Invalid username';
+				error = result.error || 'Invalid username or password';
 			}
 		} catch (err) {
 			error = err?.message || 'Login failed';
@@ -140,6 +145,22 @@
 							bind:value={username}
 							placeholder="Enter your username"
 								class="med-input {error ? 'border-med-error focus:ring-med-error' : ''}"
+							disabled={isLoading}
+						/>
+					</div>
+
+					<div>
+						<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
+							Password
+						</label>
+						<input
+							id="password"
+							name="password"
+							type="password"
+							required
+							bind:value={password}
+							placeholder="Enter your password"
+							class="med-input {error ? 'border-med-error focus:ring-med-error' : ''}"
 							disabled={isLoading}
 						/>
 					</div>

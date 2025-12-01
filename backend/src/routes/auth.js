@@ -8,6 +8,9 @@ import {
   deleteDoc,
   updateDoc,
 } from 'firebase/firestore';
+import bcrypt from 'bcrypt';
+
+const SALT_ROUNDS = 10;
 
 const authRoutes = async (fastify, opts) => {
   
@@ -42,12 +45,13 @@ const authRoutes = async (fastify, opts) => {
   fastify.post('/signup', {
     schema: {
       tags: ['auth'],
-      description: 'Register new user with username',
+      description: 'Register new user with username and password',
       body: {
         type: 'object',
-        required: ['username', 'profile'],
+        required: ['username', 'password', 'profile'],
         properties: {
           username: { type: 'string', minLength: 3, maxLength: 30 },
+          password: { type: 'string', minLength: 8 },
           profile: {
             type: 'object',
             required: ['role'],
@@ -90,17 +94,21 @@ const authRoutes = async (fastify, opts) => {
       },
     },
   }, async (request, reply) => {
-    const { username, profile } = request.body;
+    const { username, password, profile } = request.body;
 
-    // log incoming payload for debugging signup failures
-    fastify.log.debug({ body: request.body }, 'Signup payload');
+    // log incoming payload for debugging signup failures (without password)
+    fastify.log.debug({ username, profile }, 'Signup payload');
 
     try {
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
       // Use the new UserProfileService to create user
       const newUser = await fastify.userProfile.createUserProfile(username, {
         role: profile.role,
         email: profile.email || null,
-        verified: false
+        verified: false,
+        passwordHash // Store hashed password
       });
 
       reply.code(201).send({
@@ -140,14 +148,13 @@ const authRoutes = async (fastify, opts) => {
   fastify.post('/login', {
     schema: {
       tags: ['auth'],
-      description: 'Authenticate user with username',
+      description: 'Authenticate user with username and password',
       body: {
         type: 'object',
-        required: ['username'],
+        required: ['username', 'password'],
         properties: {
           username: { type: 'string' },
-          // Note: For now, we're doing simple username-only login
-          // In production, you'd want proper password authentication
+          password: { type: 'string' }
         }
       },
       response: {
@@ -178,7 +185,7 @@ const authRoutes = async (fastify, opts) => {
       },
     },
   }, async (request, reply) => {
-    const { username } = request.body;
+    const { username, password } = request.body;
 
     try {
       // Find user by username
@@ -186,8 +193,18 @@ const authRoutes = async (fastify, opts) => {
       
       if (!user) {
         return reply.code(401).send({
-          error: 'USER_NOT_FOUND',
-          message: 'User not found',
+          error: 'INVALID_CREDENTIALS',
+          message: 'Invalid username or password',
+        });
+      }
+
+      // Verify password
+      const passwordMatch = await bcrypt.compare(password, user.passwordHash || '');
+      
+      if (!passwordMatch) {
+        return reply.code(401).send({
+          error: 'INVALID_CREDENTIALS',
+          message: 'Invalid username or password',
         });
       }
 

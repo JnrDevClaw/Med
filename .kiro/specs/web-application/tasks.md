@@ -2,7 +2,7 @@
 
 ## Stage 1: Authentication & IPFS User Storage
 
-- [x] 1. Update authentication system to username-only
+- [x] 1. Update authentication system with password security
 
 
 
@@ -10,10 +10,10 @@
 
 
 
-  - Remove first/last name fields from signup/login forms
-  - Update backend auth routes to handle single username field
-  - Modify user profile structure to use username as primary identifier
-  - Update existing database schema to remove name splitting
+  - Implement password-based authentication with bcrypt hashing
+  - Add password fields to signup and login forms
+  - Update auth store to support password authentication
+  - Maintain username as primary identifier
   - _Requirements: 1.1, 1.2, 1.3_
 
 - [-] 2. Implement IPFS user data storage
@@ -418,12 +418,16 @@
   - Test error handling across systems
   - _Requirements: 7.1, 7.4_
 
-- [ ] 14. Production deployment preparation
+- [-] 14. Production deployment preparation
+
+
+
   - [ ] 14.1 Configure production environment
     - Set up Docker containers for all services
     - Configure environment variables and secrets
     - Implement health checks and monitoring
     - Set up logging and error tracking
+
     - _Requirements: 8.1, 8.2_
   
   - [ ] 14.2 Security hardening

@@ -42,10 +42,11 @@ function createAuthStore() {
 			}
 		},
 
-		async loginWithUsername(username: string) {
+		async login(username: string, password: string) {
 			try {
 				const response = await api.post('/auth/login', {
-					username
+					username,
+					password
 				});
 
 				const { accessToken, refreshToken, user } = response;
@@ -84,9 +85,9 @@ function createAuthStore() {
 			}
 		},
 
-		async login(did: string, signature: string, challenge: string) {
+		async loginWithDID(did: string, signature: string, challenge: string) {
 			try {
-				const response = await api.post('/auth/login', {
+				const response = await api.post('/auth/login-did', {
 					did,
 					signature,
 					challenge
@@ -111,7 +112,7 @@ function createAuthStore() {
 
 				return { success: true };
 			} catch (error: any) {
-				console.error('Login failed:', error);
+				console.error('DID login failed:', error);
 				return { 
 					success: false, 
 					error: error.message || 'Login failed' 
@@ -119,10 +120,11 @@ function createAuthStore() {
 			}
 		},
 
-		async signup(username: string, profile: { role: 'patient' | 'doctor'; email?: string; [key: string]: any }) {
+		async signup(username: string, password: string, profile: { role: 'patient' | 'doctor'; email?: string; [key: string]: any }) {
 			try {
 				const response = await api.post('/auth/signup', {
 					username,
+					password,
 					profile
 				});
 

@@ -36,7 +36,7 @@
     "@helia/unixfs": "latest",
     "@huggingface/inference": "^4.13.0",
     "@ipld/dag-cbor": "latest",
-    "bcrypt": "latest",
+    "bcrypt": "^6.0.0",
     "dids": "latest",
     "dotenv": "latest",
     "fastify": "latest",

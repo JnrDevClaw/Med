@@ -44,6 +44,7 @@ export class FirestoreUserService {
         role: metadata.role || 'patient',
         verified: metadata.verified || false,
         email: metadata.email || null,
+        passwordHash: metadata.passwordHash || null, // Store hashed password
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         // Remove redundant fields that should be stored in IPFS
@@ -163,7 +164,7 @@ export class FirestoreUserService {
       }
 
       // Filter allowed metadata fields (prevent storing profile data in Firestore)
-      const allowedFields = ['role', 'verified', 'email'];
+      const allowedFields = ['role', 'verified', 'email', 'passwordHash'];
       const filteredUpdates = {};
       
       for (const [key, value] of Object.entries(updates)) {

@@ -11,6 +11,8 @@
 
 	// Common fields
 	let username = '';
+	let password = '';
+	let confirmPassword = '';
 	let email = '';
 
 	// Doctor-specific reactive state
@@ -81,7 +83,7 @@
 				})
 			};
 
-			const result = await authStore.signup(username, profileData);
+			const result = await authStore.signup(username, password, profileData);
 
 			if (result.success) {
 				toastStore.success(
@@ -120,6 +122,21 @@
 		// Username validation - only alphanumeric and underscores
 		if (!/^[a-zA-Z0-9_]+$/.test(username)) {
 			error = 'Username can only contain letters, numbers, and underscores';
+			return false;
+		}
+
+		if (!password.trim()) {
+			error = 'Please enter a password';
+			return false;
+		}
+
+		if (password.length < 8) {
+			error = 'Password must be at least 8 characters long';
+			return false;
+		}
+
+		if (password !== confirmPassword) {
+			error = 'Passwords do not match';
 			return false;
 		}
 
@@ -230,6 +247,37 @@
 								required
 								bind:value={username}
 								placeholder="Choose a username"
+								class="med-input"
+								disabled={isLoading}
+							/>
+						</div>
+						
+						<div class="mt-4">
+							<label for="password" class="block text-sm font-medium text-med-gray-900 mb-2">
+								Password *
+							</label>
+							<input
+								id="password"
+								type="password"
+								required
+								bind:value={password}
+								placeholder="Enter a secure password"
+								class="med-input"
+								disabled={isLoading}
+							/>
+							<p class="mt-1 text-xs text-med-gray-500">Must be at least 8 characters long</p>
+						</div>
+
+						<div class="mt-4">
+							<label for="confirmPassword" class="block text-sm font-medium text-med-gray-900 mb-2">
+								Confirm Password *
+							</label>
+							<input
+								id="confirmPassword"
+								type="password"
+								required
+								bind:value={confirmPassword}
+								placeholder="Re-enter your password"
 								class="med-input"
 								disabled={isLoading}
 							/>
