@@ -1,11 +1,6 @@
 {
-  "buildCommand": "pnpm install && pnpm --filter frontend run build",
+  "buildCommand": "cd Frontend && pnpm install && pnpm run build",
   "outputDirectory": "Frontend/.svelte-kit/output/client",
-  "installCommand": "pnpm install",
-  "framework": null,
-  "functions": {
-    "Frontend/.svelte-kit/output/server/index.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  "installCommand": "echo 'Skipping root install'",
+  "framework": null
 }
