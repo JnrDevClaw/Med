@@ -8,6 +8,27 @@ class ApiClient {
 		this.baseUrl = env.PUBLIC_API_URL || 'http://localhost:3001';
 	}
 
+	// Ping backend to prevent cold start
+	async pingBackend() {
+		try {
+			const response = await fetch(`${this.baseUrl}/health`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+			
+			if (response.ok) {
+				const data = await response.json();
+				console.log('Backend ping successful:', data);
+				return true;
+			}
+		} catch (error) {
+			console.warn('Backend ping failed:', error);
+		}
+		return false;
+	}
+
 	setAuthToken(token: string) {
 		this.authToken = token;
 	}

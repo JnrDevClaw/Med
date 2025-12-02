@@ -82,7 +82,10 @@ const start = async () => {
     const allowedOrigins = [
       'http://localhost:5173',
       'https://medconnect124.netlify.app',
-      process.env.CORS_ORIGIN
+      'https://medconnect1.vercel.app',
+      'https://med-qkh3.onrender.com',
+      // Split CORS_ORIGIN by comma if it contains multiple origins
+      ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : [])
     ].filter(Boolean);
 
     await server.register(cors, {
@@ -90,15 +93,24 @@ const start = async () => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return cb(null, true);
         
-        if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+        // Check if origin matches any allowed origins
+        const isAllowed = allowedOrigins.some(allowed => {
+          if (allowed && origin) {
+            return origin === allowed || origin.startsWith(allowed);
+          }
+          return false;
+        });
+        
+        if (isAllowed) {
           cb(null, true);
         } else {
-          cb(new Error('Not allowed by CORS'));
+          console.warn(`CORS blocked origin: ${origin}`);
+          cb(new Error(`Origin ${origin} not allowed by CORS policy`));
         }
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     });
 
     await server.register(rateLimit, {
@@ -191,11 +203,30 @@ const start = async () => {
 
     // Health check endpoint
     server.get('/health', async (request, reply) => {
-      return { 
+      const healthData = { 
         status: 'ok', 
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        version: '1.0.0'
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        memory: process.memoryUsage()
+      };
+      
+      // Log health checks in development for debugging
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`🏥 Health check from ${request.ip} at ${healthData.timestamp}`);
+      }
+      
+      return healthData;
+    });
+
+    // CORS test endpoint
+    server.get('/cors-test', async (request, reply) => {
+      return {
+        message: 'CORS is working!',
+        origin: request.headers.origin || 'No origin header',
+        timestamp: new Date().toISOString(),
+        allowedOrigins: allowedOrigins
       };
     });
 

@@ -1,6 +1,8 @@
 <script>
 	import { goto } from '$app/navigation';
 	import Icon from '$lib/Icon.svelte';
+	import CorsTest from '$lib/components/CorsTest.svelte';
+	import { dev } from '$app/environment';
 
 	let isMenuOpen = false;
 
@@ -118,6 +120,15 @@
 		{/if}
 	</div>
 </nav>
+
+<!-- Development CORS Test (only shown in dev mode) -->
+{#if dev}
+	<div class="bg-yellow-50 border-b border-yellow-200 p-4">
+		<div class="med-container">
+			<CorsTest />
+		</div>
+	</div>
+{/if}
 
 <!-- Premium Hero Section -->
 <section class="relative bg-gradient-to-br from-primary-500 via-primary-600 to-secondary-600 text-white overflow-hidden">
