@@ -1,10 +1,10 @@
 {
-  "buildCommand": "cd Frontend && pnpm install && pnpm run build",
+  "buildCommand": "pnpm install && pnpm --filter frontend run build",
   "outputDirectory": "Frontend/.svelte-kit/output/client",
-  "installCommand": "cd Frontend && pnpm install",
-  "framework": "sveltekit",
+  "installCommand": "pnpm install",
+  "framework": null,
   "functions": {
-    "Frontend/.svelte-kit/output/server/**": {
+    "Frontend/.svelte-kit/output/server/index.js": {
       "runtime": "nodejs20.x"
     }
   }

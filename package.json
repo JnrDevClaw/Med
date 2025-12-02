@@ -2,6 +2,7 @@
   "name": "med-connect",
   "version": "1.0.0",
   "description": "Med Connect Healthcare Web Application",
+  "private": true,
   "scripts": {
     "build": "cd Frontend && pnpm install && pnpm run build",
     "dev": "cd Frontend && pnpm run dev",
@@ -13,5 +14,6 @@
   "workspaces": [
     "Frontend",
     "backend"
-  ]
+  ],
+  "packageManager": "pnpm@10.21.0"
 }
