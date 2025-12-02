@@ -1,5 +1,4 @@
 <script>
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Icon from '$lib/Icon.svelte';
 
@@ -156,7 +155,7 @@
 			<!-- CTA Buttons -->
 			<div class="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
 				<button 
-					class="med-btn med-btn-lg bg-white text-primary-600 hover:bg-white/95 shadow-premium-lg font-semibold med-animate-bounce-in"
+					class="med-btn med-btn-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-premium-lg font-semibold med-animate-bounce-in"
 					onclick={() => navigateTo('/auth/signup')}
 				>
 					<span>Start Your Journey</span>
@@ -455,8 +454,8 @@
 					<h3 class="text-2xl font-bold mb-4">Join Thousands of Users</h3>
 					<div class="space-y-4">
 						<div class="flex items-center space-x-3">
-							<div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-								<span class="text-xl font-bold">5K+</span>
+							<div class="w-12 h-12 bg-emerald-500 bg-opacity-80 rounded-full flex items-center justify-center">
+								<span class="text-xl font-bold text-white">5K+</span>
 							</div>
 							<div>
 								<p class="font-semibold">Active Patients</p>
@@ -464,8 +463,8 @@
 							</div>
 						</div>
 						<div class="flex items-center space-x-3">
-							<div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-								<span class="text-xl font-bold">200+</span>
+							<div class="w-12 h-12 bg-emerald-500 bg-opacity-80 rounded-full flex items-center justify-center">
+								<span class="text-xl font-bold text-white">200+</span>
 							</div>
 							<div>
 								<p class="font-semibold">Verified Doctors</p>
@@ -473,8 +472,8 @@
 							</div>
 						</div>
 						<div class="flex items-center space-x-3">
-							<div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-								<span class="text-xl font-bold">98%</span>
+							<div class="w-12 h-12 bg-emerald-500 bg-opacity-80 rounded-full flex items-center justify-center">
+								<span class="text-xl font-bold text-white">98%</span>
 							</div>
 							<div>
 								<p class="font-semibold">Satisfaction Rate</p>
@@ -498,7 +497,7 @@
 			Join thousands who trust MedConnect for their medical needs. Get started in less than 2 minutes.
 		</p>
 		<button 
-			class="bg-white text-med-green-700 hover:bg-med-green-50 font-bold py-4 px-8 rounded-xl text-lg transition duration-200"
+			class="bg-emerald-500 text-white hover:bg-emerald-600 font-bold py-4 px-8 rounded-xl text-lg transition duration-200"
 			onclick={() => navigateTo('/auth/signup')}
 		>
 			Start Your Free Account
