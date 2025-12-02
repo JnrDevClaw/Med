@@ -203,7 +203,7 @@
 		
 		// Simulate received message after a delay
 		setTimeout(() => {
-			const response: ChatMessage = {
+			const response = {
 				id: (Date.now() + 1).toString(),
 				sender: 'Dr. Sarah Wilson',
 				message: 'Thanks for your message. I can see and hear you clearly.',

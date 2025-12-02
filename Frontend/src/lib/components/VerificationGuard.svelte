@@ -49,7 +49,7 @@
 {#if canAccess}
   <slot />
 {:else}
-  <div class="verification-guard">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md mx-auto text-center p-6">
       <!-- Access Denied Icon -->
       <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
@@ -104,9 +104,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-  .verification-guard {
-    @apply min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8;
-  }
-</style>

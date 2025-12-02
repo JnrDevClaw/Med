@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { authStore } from '../../../stores/auth.ts';
-  import { apiRequest } from '../../../utils/api.ts';
+  import { api } from '../../../utils/api.ts';
   import LoadingSpinner from '../LoadingSpinner.svelte';
 
   export let session = null;
@@ -37,10 +37,7 @@
     isRefining = true;
 
     try {
-      const response = await apiRequest('/api/ai/refine/create', {
-        method: 'POST',
-        body: JSON.stringify({ prompt: originalPrompt })
-      });
+      const response = await api.post('/ai/refine/create', { prompt: originalPrompt });
 
       if (response.success) {
         session = {
@@ -72,9 +69,7 @@
     isRefining = true;
 
     try {
-      const response = await apiRequest(`/api/ai/refine/${session.sessionId}`, {
-        method: 'POST'
-      });
+      const response = await api.post(`/ai/refine/${session.sessionId}`);
 
       if (response.success) {
         session = {
@@ -118,10 +113,7 @@
     isRefining = true;
 
     try {
-      const response = await apiRequest(`/api/ai/refine/${session.sessionId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ prompt: originalPrompt })
-      });
+      const response = await api.put(`/ai/refine/${session.sessionId}`, { prompt: originalPrompt });
 
       if (response.success) {
         session = {
@@ -155,9 +147,7 @@
     isSending = true;
 
     try {
-      const response = await apiRequest(`/api/ai/refine/${session.sessionId}/send`, {
-        method: 'POST'
-      });
+      const response = await api.post(`/ai/refine/${session.sessionId}/send`);
 
       if (response.success) {
         session = {

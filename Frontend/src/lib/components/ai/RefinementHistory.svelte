@@ -1,6 +1,6 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
-  import { apiRequest } from '../../../utils/api.ts';
+  import { api } from '../../../utils/api.ts';
   import LoadingSpinner from '../LoadingSpinner.svelte';
 
   const dispatch = createEventDispatcher();
@@ -19,7 +19,7 @@
     error = null;
 
     try {
-      const response = await apiRequest('/api/ai/refine/history?limit=20');
+      const response = await api.get('/ai/refine/history', { limit: 20 });
 
       if (response.success) {
         sessions = response.sessions;
@@ -36,7 +36,7 @@
 
   async function loadSessionDetails(sessionId) {
     try {
-      const response = await apiRequest(`/api/ai/refine/${sessionId}`);
+      const response = await api.get(`/ai/refine/${sessionId}`);
 
       if (response.success) {
         selectedSession = response.session;

@@ -327,8 +327,8 @@
 	}
 </script>
 
-<!-- Verification Guard for Doctor Features -->
 {#if isDoctor}
+	<!-- Verification Guard for Doctor Features -->
 	<VerificationGuard requireVerifiedDoctor={true}>
 		<div class="container mx-auto px-4 py-8">
 			<div class="max-w-6xl mx-auto">
@@ -340,15 +340,6 @@
 
 				<!-- Verification Prompt for Unverified Doctors -->
 				<VerificationPrompt />
-{:else}
-	<div class="container mx-auto px-4 py-8">
-		<div class="max-w-6xl mx-auto">
-			<!-- Header -->
-			<div class="mb-8">
-				<h1 class="text-3xl font-bold text-gray-900 mb-2">Consultations</h1>
-				<p class="text-gray-600">Request consultations with verified doctors</p>
-			</div>
-{/if}
 
 		<!-- Error/Success Messages -->
 		{#if error}
@@ -484,8 +475,8 @@
 				</div>
 
 				<div class="p-6">
-					{@const pendingRequests = consultationRequests.filter(r => r.status === 'assigned' && r.assignedDoctorUsername === user?.username)}
-					{#if pendingRequests.length > 0}
+					{#if consultationRequests.filter(r => r.status === 'assigned' && r.assignedDoctorUsername === user?.username).length > 0}
+						{@const pendingRequests = consultationRequests.filter(r => r.status === 'assigned' && r.assignedDoctorUsername === user?.username)}
 						<div class="space-y-4">
 							{#each pendingRequests as request}
 								<div class="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
@@ -566,12 +557,14 @@
 				</div>
 
 				<div class="p-6">
-					{@const historyRequests = consultationRequests.filter(r => 
+					{#if consultationRequests.filter(r => 
 						(r.status === 'accepted' || r.status === 'completed' || r.status === 'rejected') && 
 						r.assignedDoctorUsername === user?.username
-					)}
-					
-					{#if historyRequests.length > 0}
+					).length > 0}
+						{@const historyRequests = consultationRequests.filter(r => 
+							(r.status === 'accepted' || r.status === 'completed' || r.status === 'rejected') && 
+							r.assignedDoctorUsername === user?.username
+						)}
 						<div class="space-y-4">
 							{#each historyRequests as request}
 								<div class="border border-gray-200 rounded-lg p-4 {request.status === 'completed' ? 'bg-green-50' : request.status === 'rejected' ? 'bg-red-50' : 'bg-blue-50'}">
@@ -1220,12 +1213,161 @@
 					</div>
 				{/if}
 			</div>
+			</div>
 		</div>
-	</div>
-{#if isDoctor}
 	</VerificationGuard>
 {:else}
-</div>
+	<div class="container mx-auto px-4 py-8">
+		<div class="max-w-6xl mx-auto">
+			<!-- Header -->
+			<div class="mb-8">
+				<h1 class="text-3xl font-bold text-gray-900 mb-2">Consultations</h1>
+				<p class="text-gray-600">Request consultations with verified doctors</p>
+			</div>
+
+			<!-- Error/Success Messages -->
+			{#if error}
+				<div class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+					{error}
+				</div>
+			{/if}
+
+			{#if success}
+				<div class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+					{success}
+				</div>
+			{/if}
+
+			<!-- Pre-call verification prompts -->
+			<div class="mb-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+				<h2 class="text-xl font-semibold text-yellow-800 mb-4">Before Requesting a Consultation</h2>
+				<p class="text-yellow-700 mb-4">
+					We recommend trying these resources first, as they may provide the answers you need:
+				</p>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+					<a 
+						href="/qa" 
+						class="flex items-center p-4 bg-white border border-yellow-300 rounded-lg hover:bg-yellow-50 transition-colors"
+					>
+						<div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+							<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+						<div>
+							<h3 class="font-semibold text-gray-900">Q&A Forum</h3>
+							<p class="text-sm text-gray-600">Ask questions and get answers from the community</p>
+						</div>
+					</a>
+					<a 
+						href="/ai" 
+						class="flex items-center p-4 bg-white border border-yellow-300 rounded-lg hover:bg-yellow-50 transition-colors"
+					>
+						<div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+							<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+							</svg>
+						</div>
+						<div>
+							<h3 class="font-semibold text-gray-900">AI Assistant</h3>
+							<p class="text-sm text-gray-600">Get instant AI-powered medical guidance</p>
+						</div>
+					</a>
+				</div>
+				<div class="flex items-center text-sm text-yellow-700">
+					<svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+						<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+					</svg>
+					Video consultations are for cases that require direct doctor interaction
+				</div>
+			</div>
+
+			<!-- Patient: Create Consultation Request -->
+			<div class="mb-8">
+				<div class="flex justify-between items-center mb-4">
+					<h2 class="text-xl font-semibold">Request Video Consultation</h2>
+					<button
+						type="button"
+						on:click={() => showCreateForm = !showCreateForm}
+						class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+					>
+						{showCreateForm ? 'Cancel' : 'New Request'}
+					</button>
+				</div>
+
+				{#if showCreateForm}
+					<!-- Form content will be here -->
+				{/if}
+			</div>
+
+			<!-- Doctor Search and Selection -->
+			<div class="mb-8 bg-white rounded-lg shadow-md p-6">
+				<div class="flex justify-between items-center mb-4">
+					<h2 class="text-xl font-semibold">Find Available Doctors</h2>
+					<button
+						type="button"
+						on:click={loadAvailableDoctors}
+						disabled={loading}
+						class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+					>
+						{loading ? 'Refreshing...' : 'Refresh'}
+					</button>
+				</div>
+				<!-- Doctor list content -->
+			</div>
+
+			<!-- Consultation Requests -->
+			<div class="bg-white rounded-lg shadow-md">
+				<div class="p-6 border-b border-gray-200">
+					<div class="flex justify-between items-center mb-4">
+						<h2 class="text-xl font-semibold">Your Requests</h2>
+					</div>
+
+					<!-- Filters -->
+					<div class="flex space-x-4">
+						<select
+							bind:value={statusFilter}
+							on:change={loadConsultationRequests}
+							class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							<option value="">All Statuses</option>
+							<option value="pending">Pending</option>
+							<option value="assigned">Assigned</option>
+							<option value="accepted">Accepted</option>
+							<option value="rejected">Rejected</option>
+							<option value="completed">Completed</option>
+							<option value="cancelled">Cancelled</option>
+						</select>
+
+						<select
+							bind:value={categoryFilter}
+							on:change={loadConsultationRequests}
+							class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							<option value="">All Categories</option>
+							{#each healthCategories as category}
+								<option value={category.name}>{category.name}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				<div class="p-6">
+					{#if loading}
+						<div class="flex justify-center py-8">
+							<LoadingSpinner />
+						</div>
+					{:else if consultationRequests.length === 0}
+						<div class="text-center py-8 text-gray-500">
+							No consultation requests found.
+						</div>
+					{:else}
+						<!-- Request list content -->
+					{/if}
+				</div>
+			</div>
+		</div>
+	</div>
 {/if}
 
 <!-- Consultation Request Confirmation Dialog -->
